@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>HelixForge</Title>
+    <Authors>TekLot,$(AssemblyName)</Authors>
+    <Description>HelixForge provides a unified abstraction layer over hardware devices with a simulation backend and built-in telemetry. Write once, run on real or simulated hardware.</Description>
+    <Copyright>Copyright © 2026 TekLot</Copyright>
+    <PackageId>HelixForge</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageTags>HelixForge;HardwareAbstraction;Simulation;Robotics;UAV;Telemetry;dotnet-library</PackageTags>
+    <PackageReleaseNotes>Initial release. Device abstraction layer for IMU, GPS, and Motor with simulation backend and telemetry system.</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+</Project>

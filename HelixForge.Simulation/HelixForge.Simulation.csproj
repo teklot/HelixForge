@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>HelixForge.Simulation</Title>
+    <Authors>TekLot,$(AssemblyName)</Authors>
+    <Description>Simulation backend for HelixForge. Provides deterministic time-step execution with configurable noise and drift models for IMU, GPS, and motor devices.</Description>
+    <Copyright>Copyright © 2026 TekLot</Copyright>
+    <PackageId>HelixForge.Simulation</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageTags>HelixForge;Simulation;Robotics;UAV;Deterministic;dotnet-library</PackageTags>
+    <PackageReleaseNotes>Initial release. Deterministic simulation engine with IMU, GPS, and motor simulation models.</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HelixForge\HelixForge.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>HelixForge.Telemetry</Title>
+    <Authors>TekLot,$(AssemblyName)</Authors>
+    <Description>Telemetry side-channel for HelixForge. Provides a decoupled telemetry bus with console and delegate sinks for real-time observability.</Description>
+    <Copyright>Copyright © 2026 TekLot</Copyright>
+    <PackageId>HelixForge.Telemetry</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageTags>HelixForge;Telemetry;Observability;Robotics;dotnet-library</PackageTags>
+    <PackageReleaseNotes>Initial release. Telemetry bus with console and delegate sinks.</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HelixForge\HelixForge.csproj" />
+  </ItemGroup>
+
+</Project>
