@@ -1,20 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>HelixForge.Hardware</Title>
     <Authors>TekLot,$(AssemblyName)</Authors>
-    <Description>Real hardware device drivers for HelixForge. Placeholder for future hardware backend implementations.</Description>
+    <Description>Real hardware device drivers for HelixForge. SPI/I2C/UART/PWM drivers for IMU, GPS, and motor ESC hardware.</Description>
     <Copyright>Copyright © 2026 TekLot</Copyright>
     <PackageId>HelixForge.Hardware</PackageId>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageTags>HelixForge;Hardware;Robotics;UAV;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Placeholder package for future hardware driver implementations.</PackageReleaseNotes>
+    <PackageTags>HelixForge;Hardware;Robotics;UAV;IMU;GPS;PWM;I2C;SPI;dotnet-library</PackageTags>
+    <PackageReleaseNotes>Initial hardware drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -23,6 +23,11 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Device.Gpio" Version="4.2.0" />
+    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HelixForge\HelixForge.csproj" />

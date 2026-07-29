@@ -1,5 +1,6 @@
 # HelixForge — Hardware Abstraction and Simulation for .NET
 
+[![CI](https://github.com/teklot/HelixForge/actions/workflows/ci.yml/badge.svg)](https://github.com/teklot/HelixForge/actions)
 [![NuGet Version](https://img.shields.io/nuget/v/HelixForge)](https://www.nuget.org/packages/HelixForge)
 [![.NET](https://img.shields.io/badge/.NET-net10.0%20%7C%20netstandard2.0-blue)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
@@ -175,7 +176,7 @@ The delegate sink pattern makes it trivial to write telemetry to any backend.
 | **HelixForge** | Core abstractions: `IDevice`, `ISensor`, `IActuator`, `IImuDevice`, `IGpsDevice`, `IMotorDevice`, `Vector3`, `ImuData`, `GpsData`, `DeviceRegistry`, `ITelemetryPublisher` |
 | **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimGpsDevice`, configurable noise and drift models |
 | **HelixForge.Telemetry** | Telemetry bus: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `ITelemetrySink` |
-| **HelixForge.Hardware** | Placeholder for future real hardware device drivers |
+| **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC — more drivers coming in future releases |
 
 ## Installation
 
@@ -345,8 +346,9 @@ bus.Dispose();
 ### Phase 2 — Simulation ✓
 - Deterministic simulation engine, IMU/GPS/motor models, noise and drift, PID demo
 
-### Phase 3 — Hardware Drivers (planned)
-- Real IMU drivers (SPI/I2C), motor ESC drivers (PWM/DShot), GPS (NMEA/UBX)
+### Phase 3 — Hardware Drivers ✓
+- Real IMU driver (BMI160, I2C), GPS driver (NMEA), ESC driver (PWM)
+- Future: SPI IMU, DShot ESC, UBX GPS, additional chips
 
 ### Phase 4 — Control Library (planned)
 - Built-in PID controller, LQR, state estimation, trajectory generation

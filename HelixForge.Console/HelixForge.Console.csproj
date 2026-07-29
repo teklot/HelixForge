@@ -12,6 +12,7 @@
     <ProjectReference Include="..\HelixForge\HelixForge.csproj" />
     <ProjectReference Include="..\HelixForge.Simulation\HelixForge.Simulation.csproj" />
     <ProjectReference Include="..\HelixForge.Telemetry\HelixForge.Telemetry.csproj" />
+    <ProjectReference Include="..\HelixForge.Hardware\HelixForge.Hardware.csproj" />
   </ItemGroup>
 
 </Project>
