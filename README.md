@@ -7,7 +7,7 @@
 
 Every hardware-focused team eventually builds the same thing: a sensor class, a motor class, a way to read IMU data, a way to command ESCs, some telemetry pipeline. Usually scattered across projects, each with different interfaces, none composable, all tied to specific hardware. Testing requires physical devices.
 
-HelixForge is the canonical abstraction layer for hardware on .NET — **the vocabulary that makes real and simulated hardware interchangeable.** Not a driver framework, not a telemetry database, not a control library. A shared device interface that sits between your application and your hardware, giving every IMU reading, every motor command, every GPS fix the same shape regardless of source.
+HelixForge is a shared abstraction layer for hardware on .NET — **the vocabulary that makes real and simulated hardware interchangeable.** Not a driver framework, not a telemetry database, not a control library. A common device interface that sits between your application and your hardware, giving every IMU reading, every motor command, every GPS fix the same shape regardless of source.
 
 **Guiding principle:** Simulation must never depend on telemetry. Telemetry must never affect behavior.
 
@@ -51,7 +51,7 @@ The entire domain model lives in `HelixForge` — **core abstractions with zero 
 │  │  Cross, Lerp   │  │  .GetByType()  │  │                │  │
 │  └────────────────┘  └────────────────┘  └────────────────┘  │
 │  ┌────────────────────────────────────────────────────────┐  │
-│  │   ExecutionMode: Real = 0, Simulated = 1               │  │
+│  │   ExecutionMode: Simulation = 0, Real = 1              │  │
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```

@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
-    <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>HelixForge.Telemetry</Title>
     <Authors>TekLot,$(AssemblyName)</Authors>
@@ -14,14 +11,10 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;Telemetry;Observability;Robotics;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Initial release. Telemetry bus with console and delegate sinks.</PackageReleaseNotes>
+    <PackageReleaseNotes>Telemetry side-channel bus with console and delegate sinks — decoupled observation that never affects system behavior.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>

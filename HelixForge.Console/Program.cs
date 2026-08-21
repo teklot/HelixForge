@@ -22,7 +22,6 @@ class Program
         System.Console.WriteLine();
 
         var timeStep = TimeSpan.FromMilliseconds(10); // 100Hz
-        var registry = new DeviceRegistry();
         var telemetry = new TelemetryBus();
         telemetry.AddSink(new ConsoleSink());
 

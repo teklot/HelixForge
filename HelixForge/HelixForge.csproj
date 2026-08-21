@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
-    <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>HelixForge</Title>
     <Authors>TekLot,$(AssemblyName)</Authors>
@@ -14,14 +11,10 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;HardwareAbstraction;Simulation;Robotics;UAV;Telemetry;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Initial release. Device abstraction layer for IMU, GPS, and Motor with simulation backend and telemetry system.</PackageReleaseNotes>
+    <PackageReleaseNotes>Unified device abstraction layer: typed sensor and actuator interfaces, zero-allocation ImuData/GpsData/Vector3 value types, and a type-safe DeviceRegistry.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
 </Project>

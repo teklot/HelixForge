@@ -10,7 +10,7 @@ public sealed class SimulationConfig
     /// <summary>Time step for each simulation iteration. Default is 10ms (100Hz).</summary>
     public TimeSpan TimeStep { get; set; } = TimeSpan.FromMilliseconds(10);
 
-    /// <summary>Maximum number of iterations. 0 = unlimited.</summary>
+    /// <summary>Maximum number of steps per <c>Run</c> call. 0 = unlimited.</summary>
     public int MaxIterations { get; set; }
 
     /// <summary>Initial simulation time. Default is zero.</summary>

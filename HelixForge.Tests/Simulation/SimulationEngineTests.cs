@@ -65,6 +65,24 @@ public class SimulationEngineTests
     }
 
     [Fact]
+    public void Run_MaxIterations_AppliesPerRunCall()
+    {
+        var registry = new DeviceRegistry();
+        registry.Register(new SimImuDevice("imu-01", new ImuSimConfig()));
+        var config = new SimulationConfig
+        {
+            TimeStep = TimeSpan.FromMilliseconds(10),
+            MaxIterations = 5
+        };
+        var engine = new SimulationEngine(registry, null, config);
+
+        engine.Run(TimeSpan.FromSeconds(10));
+        engine.Run(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(10, engine.StepCount);
+    }
+
+    [Fact]
     public void Reset_ReturnsToInitialState()
     {
         var registry = new DeviceRegistry();

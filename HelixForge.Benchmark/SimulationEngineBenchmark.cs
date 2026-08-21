@@ -9,6 +9,7 @@ namespace HelixForge.Benchmark;
 public class SimulationEngineBenchmark
 {
     private SimulationEngine _engine = null!;
+    private SimulationEngine _engineWithTelemetry = null!;
     private DeviceRegistry _registry = null!;
 
     [GlobalSetup]
@@ -25,6 +26,10 @@ public class SimulationEngineBenchmark
         };
 
         _engine = new SimulationEngine(_registry, null, config);
+
+        var telemetry = new TelemetryBus();
+        telemetry.AddSink(new DelegateSink(_ => { }));
+        _engineWithTelemetry = new SimulationEngine(_registry, telemetry, config);
     }
 
     [Benchmark]
@@ -45,17 +50,6 @@ public class SimulationEngineBenchmark
     [Benchmark]
     public void StepWithTelemetry()
     {
-        var telemetry = new TelemetryBus();
-        telemetry.AddSink(new DelegateSink(_ => { }));
-
-        var config = new SimulationConfig
-        {
-            TimeStep = TimeSpan.FromMilliseconds(0.01),
-            RandomSeed = 42
-        };
-
-        var engine = new SimulationEngine(_registry, telemetry, config);
-        engine.Step();
-        telemetry.Dispose();
+        _engineWithTelemetry.Step();
     }
 }

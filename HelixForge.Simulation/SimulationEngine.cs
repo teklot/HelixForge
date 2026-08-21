@@ -67,11 +67,13 @@ public sealed class SimulationEngine
     public void Run(TimeSpan duration)
     {
         var endTime = _currentTime + duration;
+        int iterationsThisRun = 0;
         while (_currentTime < endTime)
         {
-            if (_config.MaxIterations > 0 && _stepCount >= _config.MaxIterations)
+            if (_config.MaxIterations > 0 && iterationsThisRun >= _config.MaxIterations)
                 break;
             Step();
+            iterationsThisRun++;
         }
     }
 
@@ -83,11 +85,13 @@ public sealed class SimulationEngine
     public void Run(TimeSpan duration, Action<TimeSpan> onStep)
     {
         var endTime = _currentTime + duration;
+        int iterationsThisRun = 0;
         while (_currentTime < endTime)
         {
-            if (_config.MaxIterations > 0 && _stepCount >= _config.MaxIterations)
+            if (_config.MaxIterations > 0 && iterationsThisRun >= _config.MaxIterations)
                 break;
             Step();
+            iterationsThisRun++;
             onStep(_currentTime);
         }
     }

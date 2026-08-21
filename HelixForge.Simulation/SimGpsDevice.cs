@@ -21,12 +21,12 @@ public sealed class SimGpsDevice : IGpsDevice
     /// </summary>
     /// <param name="deviceId">Unique identifier for this device.</param>
     /// <param name="config">Simulation configuration for GPS behavior.</param>
-    /// <param name="random">Random number generator for noise. If null, creates one.</param>
+    /// <param name="random">Random number generator for noise. If null, creates one from config seed.</param>
     public SimGpsDevice(string deviceId, GpsSimConfig config, Random? random = null)
     {
         DeviceId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
         _config = config ?? throw new ArgumentNullException(nameof(config));
-        _random = random ?? new Random();
+        _random = random ?? new Random(config.RandomSeed ?? Environment.TickCount);
         _latitude = config.InitialLatitude;
         _longitude = config.InitialLongitude;
         _altitude = config.InitialAltitude;

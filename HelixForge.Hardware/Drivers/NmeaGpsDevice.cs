@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
@@ -19,6 +20,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
 
     private readonly string _portName;
     private readonly int _baudRate;
+    private readonly Stopwatch _stopwatch = new Stopwatch();
     private SerialPort? _serialPort;
     private GpsData _latestReading;
 
@@ -56,6 +58,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
         };
         _serialPort.Open();
 
+        _stopwatch.Restart();
         IsInitialized = true;
     }
 
@@ -103,6 +106,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
     /// <inheritdoc />
     public void Dispose()
     {
+        _stopwatch.Reset();
         _serialPort?.Close();
         _serialPort?.Dispose();
         _serialPort = null;
@@ -125,7 +129,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
         double latitude = ConvertNmeaCoordinate(latRaw, parts[3]);
         double longitude = ConvertNmeaCoordinate(lonRaw, parts[5]);
 
-        _latestReading = new GpsData(latitude, longitude, altitude, new Vector3(0, 0, 0), TimeSpan.Zero);
+        _latestReading = new GpsData(latitude, longitude, altitude, new Vector3(0, 0, 0), _stopwatch.Elapsed);
     }
 
     private void TryParseRmc(string sentence)
@@ -141,7 +145,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
 
         var current = _latestReading;
         _latestReading = new GpsData(current.Latitude, current.Longitude, current.Altitude,
-            new Vector3(speedMps, 0, 0), TimeSpan.Zero);
+            new Vector3(speedMps, 0, 0), _stopwatch.Elapsed);
     }
 
     private static double ConvertNmeaCoordinate(double raw, string direction)

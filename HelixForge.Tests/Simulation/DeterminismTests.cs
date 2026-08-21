@@ -39,6 +39,38 @@ public class DeterminismTests
         Assert.True(anyDifferent, "Different seeds should produce different noisy acceleration readings");
     }
 
+    [Fact]
+    public void Gps_SameSeed_ProducesIdenticalTrajectory()
+    {
+        var results1 = RunGpsSimulation(seed: 123);
+        var results2 = RunGpsSimulation(seed: 123);
+
+        Assert.Equal(results1.Count, results2.Count);
+        for (int i = 0; i < results1.Count; i++)
+        {
+            Assert.Equal(results1[i], results2[i]);
+        }
+    }
+
+    [Fact]
+    public void Gps_DifferentSeeds_ProduceDifferentResults()
+    {
+        var results1 = RunGpsSimulation(seed: 123);
+        var results2 = RunGpsSimulation(seed: 456);
+
+        bool anyDifferent = false;
+        for (int i = 0; i < Math.Min(results1.Count, results2.Count); i++)
+        {
+            if (results1[i].Latitude != results2[i].Latitude)
+            {
+                anyDifferent = true;
+                break;
+            }
+        }
+
+        Assert.True(anyDifferent, "Different seeds should produce different noisy position readings");
+    }
+
     private List<ImuData> RunSimulation(int seed)
     {
         var registry = new DeviceRegistry();
@@ -64,6 +96,27 @@ public class DeterminismTests
         {
             results.Add(imu.Read());
         });
+
+        return results;
+    }
+
+    private List<GpsData> RunGpsSimulation(int seed)
+    {
+        var gpsConfig = new GpsSimConfig
+        {
+            PositionNoise = 2.0,
+            RandomSeed = seed
+        };
+        var gps = new SimGpsDevice("gps-01", gpsConfig);
+        gps.Initialize();
+        gps.SetVelocity(new Vector3(10, 0, 0));
+
+        var results = new List<GpsData>();
+        for (int i = 0; i < 100; i++)
+        {
+            gps.Update(TimeSpan.FromMilliseconds(10));
+            results.Add(gps.Read());
+        }
 
         return results;
     }

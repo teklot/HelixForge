@@ -16,4 +16,7 @@ public sealed class GpsSimConfig
 
     /// <summary>Initial altitude in meters. Default is 0.0.</summary>
     public double InitialAltitude { get; set; } = 0.0;
+
+    /// <summary>Random seed for deterministic noise generation. Null uses system clock.</summary>
+    public int? RandomSeed { get; set; }
 }

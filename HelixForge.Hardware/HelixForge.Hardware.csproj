@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
-    <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>HelixForge.Hardware</Title>
     <Authors>TekLot,$(AssemblyName)</Authors>
@@ -14,19 +11,15 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;Hardware;Robotics;UAV;IMU;GPS;PWM;I2C;SPI;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Initial hardware drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC.</PackageReleaseNotes>
+    <PackageReleaseNotes>Real hardware drivers: BMI160 IMU over I2C with full accelerometer/gyroscope burst reads and monotonic timestamps, NMEA 0183 GPS over UART, and PWM motor ESC control.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="System.Device.Gpio" Version="4.2.0" />
-    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
+    <PackageReference Include="System.Device.Gpio" />
+    <PackageReference Include="System.IO.Ports" />
   </ItemGroup>
 
   <ItemGroup>

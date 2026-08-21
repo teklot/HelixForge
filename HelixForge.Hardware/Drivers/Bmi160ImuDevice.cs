@@ -1,5 +1,6 @@
 using System;
 using System.Device.I2c;
+using System.Diagnostics;
 
 namespace HelixForge.Hardware.Drivers;
 
@@ -24,6 +25,8 @@ public sealed class Bmi160ImuDevice : IImuDevice
 
     private readonly int _busId;
     private readonly int _deviceAddress;
+    private readonly Func<I2cConnectionSettings, I2cDevice>? _deviceFactory;
+    private readonly Stopwatch _stopwatch = new Stopwatch();
     private I2cDevice? _device;
     private ImuData _latestReading;
 
@@ -40,11 +43,16 @@ public sealed class Bmi160ImuDevice : IImuDevice
     /// <param name="deviceId">Unique device identifier.</param>
     /// <param name="busId">I2C bus ID (typically 1 on Raspberry Pi).</param>
     /// <param name="deviceAddress">I2C address (0x68 or 0x69 depending on SDO pin).</param>
-    public Bmi160ImuDevice(string deviceId, int busId, int deviceAddress)
+    /// <param name="deviceFactory">
+    /// Optional factory used to create the I2C device. Defaults to <see cref="I2cDevice.Create"/>.
+    /// Intended for custom transports and testing.
+    /// </param>
+    public Bmi160ImuDevice(string deviceId, int busId, int deviceAddress, Func<I2cConnectionSettings, I2cDevice>? deviceFactory = null)
     {
         DeviceId = deviceId;
         _busId = busId;
         _deviceAddress = deviceAddress;
+        _deviceFactory = deviceFactory;
         _latestReading = ImuData.Empty;
     }
 
@@ -55,7 +63,7 @@ public sealed class Bmi160ImuDevice : IImuDevice
             throw new InvalidOperationException($"Device '{DeviceId}' is already initialized.");
 
         var settings = new I2cConnectionSettings(_busId, _deviceAddress);
-        _device = I2cDevice.Create(settings);
+        _device = _deviceFactory != null ? _deviceFactory(settings) : I2cDevice.Create(settings);
 
         byte chipId = ReadRegister(ChipIdRegister);
         if (chipId != ExpectedChipId)
@@ -67,6 +75,7 @@ public sealed class Bmi160ImuDevice : IImuDevice
         WriteRegister(CommandRegister, AccelNormalMode);
         WriteRegister(CommandRegister, GyroNormalMode);
 
+        _stopwatch.Restart();
         IsInitialized = true;
     }
 
@@ -76,7 +85,7 @@ public sealed class Bmi160ImuDevice : IImuDevice
         if (!IsInitialized)
             throw new InvalidOperationException($"Device '{DeviceId}' is not initialized.");
 
-        Span<byte> buffer = stackalloc byte[12];
+        Span<byte> buffer = stackalloc byte[14];
         ReadRegisters(AccelDataRegister, buffer);
 
         short accelX = (short)(buffer[0] | (buffer[1] << 8));
@@ -84,12 +93,12 @@ public sealed class Bmi160ImuDevice : IImuDevice
         short accelZ = (short)(buffer[4] | (buffer[5] << 8));
         short gyroX = (short)(buffer[8] | (buffer[9] << 8));
         short gyroY = (short)(buffer[10] | (buffer[11] << 8));
-        short gyroZ = (short)(buffer[6] | (buffer[7] << 8));
+        short gyroZ = (short)(buffer[12] | (buffer[13] << 8));
 
         var acceleration = new Vector3(accelX * AccelScale, accelY * AccelScale, accelZ * AccelScale);
         var angularVelocity = new Vector3(gyroX * GyroScale, gyroY * GyroScale, gyroZ * GyroScale);
 
-        _latestReading = new ImuData(Vector3.Zero, angularVelocity, acceleration, TimeSpan.Zero);
+        _latestReading = new ImuData(Vector3.Zero, angularVelocity, acceleration, _stopwatch.Elapsed);
         return _latestReading;
     }
 
@@ -109,6 +118,7 @@ public sealed class Bmi160ImuDevice : IImuDevice
     /// <inheritdoc />
     public void Dispose()
     {
+        _stopwatch.Reset();
         _device?.Dispose();
         _device = null;
         IsInitialized = false;
