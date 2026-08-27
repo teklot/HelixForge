@@ -22,4 +22,16 @@ public sealed class ImuSimConfig
 
     /// <summary>Random seed for deterministic noise generation. Null uses system clock.</summary>
     public int? RandomSeed { get; set; }
+
+    /// <summary>Bias-instability random-walk rate per axis per second. Default is 0.0 (disabled).</summary>
+    public double BiasInstability { get; set; } = 0.0;
+
+    /// <summary>Gyro bias added per degree of temperature deviation from the operating point (rad/s per °C). Default is 0.0.</summary>
+    public double TemperatureCoefficient { get; set; } = 0.0;
+
+    /// <summary>Operating temperature in degrees Celsius where the temperature coefficient applies. Default is 25.0.</summary>
+    public double OperatingTemperature { get; set; } = 25.0;
+
+    /// <summary>Current simulated temperature in degrees Celsius. Default is 25.0.</summary>
+    public double Temperature { get; set; } = 25.0;
 }

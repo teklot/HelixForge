@@ -8,22 +8,32 @@ using HelixForge.Telemetry;
 namespace HelixForge.Console;
 
 /// <summary>
-/// Golden Path Demo: UAV stabilization system.
-/// Default mode runs in simulation; pass --mode real to use physical hardware.
+/// HelixForge demos.
+/// Default runs the Golden Path UAV stabilization simulation; pass --mode real for physical hardware.
+/// Run a specific device sample with --sample &lt;mag|baro|servo|gps&gt;.
 /// </summary>
 class Program
 {
     static void Main(string[] args)
     {
+        var timeStep = TimeSpan.FromMilliseconds(10); // 100Hz
+        var telemetry = new TelemetryBus();
+        telemetry.AddSink(new ConsoleSink());
+
+        string? sample = FindArg(args, "--sample");
+        if (sample != null)
+        {
+            RunSample(sample, timeStep);
+            return;
+        }
+
         bool useRealHardware = args is ["--mode", "real"];
 
         System.Console.WriteLine("=== HelixForge UAV Stabilization Demo ===");
         System.Console.WriteLine($"Mode: {(useRealHardware ? "REAL HARDWARE" : "Simulation")}");
         System.Console.WriteLine();
-
-        var timeStep = TimeSpan.FromMilliseconds(10); // 100Hz
-        var telemetry = new TelemetryBus();
-        telemetry.AddSink(new ConsoleSink());
+        System.Console.WriteLine("Run `--sample <mag|baro|servo|gps>` for per-device demos.");
+        System.Console.WriteLine();
 
         if (useRealHardware)
         {
@@ -32,6 +42,173 @@ class Program
         else
         {
             RunSimulationDemo(telemetry, timeStep);
+        }
+    }
+
+    static string? FindArg(string[] args, string name)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+                return args[i + 1];
+        }
+        return null;
+    }
+
+    static void RunSample(string name, TimeSpan timeStep)
+    {
+        switch (name.ToLowerInvariant())
+        {
+            case "mag":
+                RunMagSample(timeStep);
+                break;
+            case "baro":
+                RunBarometerSample(timeStep);
+                break;
+            case "servo":
+                RunServoSample(timeStep);
+                break;
+            case "gps":
+                RunGpsSample(timeStep);
+                break;
+            default:
+                System.Console.WriteLine($"Unknown sample '{name}'. Choose from: mag, baro, servo, gps.");
+                break;
+        }
+    }
+
+    static void RunMagSample(TimeSpan timeStep)
+    {
+        System.Console.WriteLine("=== Magnetometer Sample ===");
+        System.Console.WriteLine("Rotates the sensor through 180 degrees of yaw and shows the field projection.");
+        System.Console.WriteLine();
+
+        var config = new MagSimConfig
+        {
+            EarthField = new Vector3(25.0, 0.0, -45.0),
+            MagneticNoise = 0.2,
+            RandomSeed = 42
+        };
+        var mag = new SimMagDevice("mag-01", config);
+        mag.Initialize();
+
+        for (int step = 0; step < 60; step++)
+        {
+            double yaw = step * 3.0 * Math.PI / 180.0;
+            mag.SetOrientation(new Vector3(0.0, 0.0, yaw));
+            mag.Update(timeStep);
+            var reading = mag.Read();
+
+            if (step % 10 == 0)
+            {
+                double heading = Math.Atan2(reading.MagneticField.Y, reading.MagneticField.X) * 180.0 / Math.PI;
+                System.Console.WriteLine(
+                    $"[yaw {step * 3,4:F0} deg] " +
+                    $"B=({reading.MagneticField.X,7:F1},{reading.MagneticField.Y,7:F1},{reading.MagneticField.Z,7:F1}) µT | " +
+                    $"xy heading={heading,6:F1} deg");
+            }
+        }
+    }
+
+    static void RunBarometerSample(TimeSpan timeStep)
+    {
+        System.Console.WriteLine("=== Barometer Sample ===");
+        System.Console.WriteLine("Climbs from 0m to 100m and shows pressure/altitude response.");
+        System.Console.WriteLine();
+
+        var config = new BarometerSimConfig
+        {
+            SeaLevelPressure = 1013.25,
+            AltitudeNoise = 0.5,
+            DriftRate = 0.001,
+            RandomSeed = 42
+        };
+        var baro = new SimBarometerDevice("baro-01", config);
+        baro.Initialize();
+
+        for (int step = 0; step <= 50; step++)
+        {
+            baro.SetAltitude(step * 2.0); // 0 -> 100m over 5s at 10ms per step
+            baro.Update(timeStep);
+            var reading = baro.Read();
+
+            if (step % 10 == 0)
+            {
+                System.Console.WriteLine(
+                    $"[{step * 10,3:D3}ms] " +
+                    $"pressure={reading.Pressure,8:F2} hPa | alt={reading.Altitude,6:F1} m");
+            }
+        }
+    }
+
+    static void RunServoSample(TimeSpan timeStep)
+    {
+        System.Console.WriteLine("=== Servo Sample ===");
+        System.Console.WriteLine("Commands 0 -> 180 -> 0 with a 60 deg/s slew rate, proving slew limiting and clamping.");
+        System.Console.WriteLine();
+
+        var config = new ServoSimConfig
+        {
+            MinAngle = 0.0,
+            MaxAngle = 180.0,
+            SlewRate = 60.0,
+            InitialAngle = 0.0
+        };
+        var servo = new SimServoDevice("servo-01", config);
+        servo.Initialize();
+
+        double[] targets = { 180.0, 0.0 };
+        int targetIndex = 0;
+        servo.SetAngle(targets[0]);
+
+        for (int step = 0; step < 130; step++)
+        {
+            servo.Update(timeStep);
+
+            if (step % 10 == 0)
+            {
+                System.Console.WriteLine(
+                    $"[{step * 10,4:D3}ms] " +
+                    $"target={servo.TargetAngle,5:F0}° | angle={servo.Angle,6:F1}°");
+            }
+
+            if (servo.TargetAngle != targets[targetIndex] && Math.Abs(servo.Angle - servo.TargetAngle) < 0.5)
+            {
+                targetIndex = (targetIndex + 1) % targets.Length;
+                servo.SetAngle(targets[targetIndex]);
+            }
+        }
+    }
+
+    static void RunGpsSample(TimeSpan timeStep)
+    {
+        System.Console.WriteLine("=== GPS Signal-Loss Sample ===");
+        System.Console.WriteLine("High dropout rate drives cyclic Fix3D <-> NoFix transitions with large uncertainty.");
+        System.Console.WriteLine();
+
+        var config = new GpsSimConfig
+        {
+            PositionNoise = 1.0,
+            UncertaintyDuringDropout = 5000.0,
+            DropoutRate = 4.0,
+            MaxDropoutDuration = 0.8,
+            BaseFixStatus = GpsFixStatus.Fix3D,
+            RandomSeed = 42
+        };
+        var gps = new SimGpsDevice("gps-01", config);
+        gps.Initialize();
+
+        for (int step = 0; step < 300; step++)
+        {
+            gps.Update(timeStep);
+            var reading = gps.Read();
+
+            if (step % 25 == 0)
+            {
+                System.Console.WriteLine(
+                    $"[{step * 10,4:D3}ms] " +
+                    $"fix={reading.FixStatus,-6} lat={reading.Latitude,9:F5} lon={reading.Longitude,9:F5} alt={reading.Altitude,7:F1}");
+            }
         }
     }
 

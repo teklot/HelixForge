@@ -3,7 +3,7 @@ using System;
 namespace HelixForge.Simulation;
 
 /// <summary>
-/// Simulated GPS device with configurable position noise.
+/// Simulated GPS device with configurable position noise and signal-loss (dropout) behavior.
 /// </summary>
 public sealed class SimGpsDevice : IGpsDevice
 {
@@ -15,6 +15,9 @@ public sealed class SimGpsDevice : IGpsDevice
     private Vector3 _velocity;
     private TimeSpan _currentTime;
     private bool _initialized;
+
+    private double _dropoutRemaining;
+    private GpsFixStatus _fixStatus;
 
     /// <summary>
     /// Creates a new simulated GPS device.
@@ -31,6 +34,8 @@ public sealed class SimGpsDevice : IGpsDevice
         _longitude = config.InitialLongitude;
         _altitude = config.InitialAltitude;
         _velocity = Vector3.Zero;
+        _fixStatus = config.BaseFixStatus;
+        _dropoutRemaining = 0.0;
     }
 
     /// <inheritdoc/>
@@ -50,7 +55,9 @@ public sealed class SimGpsDevice : IGpsDevice
 
         _initialized = true;
         _currentTime = TimeSpan.Zero;
-        LatestReading = new GpsData(_latitude, _longitude, _altitude, _velocity, _currentTime);
+        _fixStatus = _config.BaseFixStatus;
+        _dropoutRemaining = 0.0;
+        LatestReading = new GpsData(_latitude, _longitude, _altitude, _velocity, _currentTime, _fixStatus);
     }
 
     /// <inheritdoc/>
@@ -61,7 +68,9 @@ public sealed class SimGpsDevice : IGpsDevice
         _altitude = _config.InitialAltitude;
         _velocity = Vector3.Zero;
         _currentTime = TimeSpan.Zero;
-        LatestReading = new GpsData(_latitude, _longitude, _altitude, _velocity, _currentTime);
+        _fixStatus = _config.BaseFixStatus;
+        _dropoutRemaining = 0.0;
+        LatestReading = new GpsData(_latitude, _longitude, _altitude, _velocity, _currentTime, _fixStatus);
     }
 
     /// <inheritdoc/>
@@ -71,6 +80,7 @@ public sealed class SimGpsDevice : IGpsDevice
             return;
 
         _currentTime += deltaTime;
+        AdvanceDropout(deltaTime);
 
         double dt = deltaTime.TotalSeconds;
         double metersPerDegreeLat = 111320.0;
@@ -80,16 +90,21 @@ public sealed class SimGpsDevice : IGpsDevice
         _longitude += (_velocity.Y * dt) / metersPerDegreeLon;
         _altitude += _velocity.Z * dt;
 
-        double noiseLat = _config.PositionNoise * GaussianRandom() / metersPerDegreeLat;
-        double noiseLon = _config.PositionNoise * GaussianRandom() / metersPerDegreeLon;
-        double noiseAlt = _config.PositionNoise * GaussianRandom();
+        double effectiveNoise = _dropoutRemaining > 0.0
+            ? _config.UncertaintyDuringDropout
+            : _config.PositionNoise;
+
+        double noiseLat = effectiveNoise * GaussianRandom() / metersPerDegreeLat;
+        double noiseLon = effectiveNoise * GaussianRandom() / metersPerDegreeLon;
+        double noiseAlt = effectiveNoise * GaussianRandom();
 
         LatestReading = new GpsData(
             _latitude + noiseLat,
             _longitude + noiseLon,
             _altitude + noiseAlt,
             _velocity,
-            _currentTime);
+            _currentTime,
+            _fixStatus);
     }
 
     /// <summary>
@@ -103,6 +118,35 @@ public sealed class SimGpsDevice : IGpsDevice
 
     /// <inheritdoc/>
     public void Dispose() { }
+
+    private void AdvanceDropout(TimeSpan deltaTime)
+    {
+        if (_dropoutRemaining > 0.0)
+        {
+            _dropoutRemaining -= deltaTime.TotalSeconds;
+            _fixStatus = GpsFixStatus.NoFix;
+            if (_dropoutRemaining <= 0.0)
+            {
+                _dropoutRemaining = 0.0;
+                _fixStatus = _config.BaseFixStatus;
+            }
+
+            return;
+        }
+
+        // Not in a dropout window. Enter one probabilistically based on elapsed time.
+        double dt = deltaTime.TotalSeconds;
+        double p = 1.0 - Math.Exp(-_config.DropoutRate * dt);
+        if (_config.DropoutRate > 0.0 && _random.NextDouble() < p)
+        {
+            _dropoutRemaining = _config.MaxDropoutDuration * (0.5 + 0.5 * _random.NextDouble());
+            _fixStatus = GpsFixStatus.NoFix;
+        }
+        else
+        {
+            _fixStatus = _config.BaseFixStatus;
+        }
+    }
 
     private double GaussianRandom()
     {

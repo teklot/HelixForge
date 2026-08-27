@@ -131,18 +131,26 @@ public sealed class DeviceRegistry
     private static List<Type> GetImplementedDeviceTypes(IDevice device)
     {
         var types = new List<Type>();
-        var interfaceType = device.GetType();
+
+        // Index the concrete type so lookups by concrete class (e.g. SimMotorDevice)
+        // resolve, not just interface types.
+        var concreteType = device.GetType();
+        types.Add(concreteType);
+
+        var interfaceType = concreteType;
         while (interfaceType != null)
         {
             foreach (var iface in interfaceType.GetInterfaces())
             {
                 if (iface != typeof(IDisposable) && typeof(IDevice).IsAssignableFrom(iface))
                 {
-                    types.Add(iface);
+                    if (!types.Contains(iface))
+                        types.Add(iface);
                 }
             }
             interfaceType = interfaceType.BaseType;
         }
+
         return types;
     }
 }

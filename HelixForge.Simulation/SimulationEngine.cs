@@ -53,6 +53,9 @@ public sealed class SimulationEngine
         foreach (var motor in _registry.GetAllByType<SimMotorDevice>())
             motor.Update(_config.TimeStep);
 
+        foreach (var servo in _registry.GetAllByType<SimServoDevice>())
+            servo.Update(_config.TimeStep);
+
         _currentTime += _config.TimeStep;
         _stepCount++;
 
@@ -128,12 +131,30 @@ public sealed class SimulationEngine
         foreach (var motor in _registry.GetAllByType<IMotorDevice>())
             _telemetry.Publish(motor.DeviceId, "throttle", motor.Throttle, _currentTime);
 
+        foreach (var servo in _registry.GetAllByType<IServoDevice>())
+            _telemetry.Publish(servo.DeviceId, "angle", servo.Angle, _currentTime);
+
         foreach (var gps in _registry.GetAllByType<IGpsDevice>())
         {
             var data = gps.Read();
             _telemetry.Publish(gps.DeviceId, "latitude", data.Latitude, _currentTime);
             _telemetry.Publish(gps.DeviceId, "longitude", data.Longitude, _currentTime);
             _telemetry.Publish(gps.DeviceId, "altitude", data.Altitude, _currentTime);
+            _telemetry.Publish(gps.DeviceId, "fix_status", (double)data.FixStatus, _currentTime);
+        }
+
+        foreach (var mag in _registry.GetAllByType<IMagnetometerDevice>())
+        {
+            var data = mag.Read();
+            var field = data.MagneticField;
+            _telemetry.Publish(mag.DeviceId, "magnetic_field", in field, _currentTime);
+        }
+
+        foreach (var barometer in _registry.GetAllByType<IBarometerDevice>())
+        {
+            var data = barometer.Read();
+            _telemetry.Publish(barometer.DeviceId, "pressure", data.Pressure, _currentTime);
+            _telemetry.Publish(barometer.DeviceId, "altitude", data.Altitude, _currentTime);
         }
     }
 }

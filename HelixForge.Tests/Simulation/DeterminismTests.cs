@@ -120,4 +120,62 @@ public class DeterminismTests
 
         return results;
     }
+
+    [Fact]
+    public void Mag_SameSeed_ProducesIdenticalReadings()
+    {
+        var results1 = RunMagSimulation(seed: 11);
+        var results2 = RunMagSimulation(seed: 11);
+
+        Assert.Equal(results1.Count, results2.Count);
+        for (int i = 0; i < results1.Count; i++)
+        {
+            Assert.Equal(results1[i], results2[i]);
+        }
+    }
+
+    [Fact]
+    public void Baro_SameSeed_ProducesIdenticalReadings()
+    {
+        var results1 = RunBaroSimulation(seed: 22);
+        var results2 = RunBaroSimulation(seed: 22);
+
+        Assert.Equal(results1.Count, results2.Count);
+        for (int i = 0; i < results1.Count; i++)
+        {
+            Assert.Equal(results1[i], results2[i]);
+        }
+    }
+
+    private List<MagData> RunMagSimulation(int seed)
+    {
+        var config = new MagSimConfig { MagneticNoise = 1.0, RandomSeed = seed };
+        var mag = new SimMagDevice("mag-01", config);
+        mag.Initialize();
+
+        var results = new List<MagData>();
+        for (int i = 0; i < 100; i++)
+        {
+            mag.Update(TimeSpan.FromMilliseconds(10));
+            results.Add(mag.Read());
+        }
+
+        return results;
+    }
+
+    private List<BarometerData> RunBaroSimulation(int seed)
+    {
+        var config = new BarometerSimConfig { AltitudeNoise = 1.0, RandomSeed = seed };
+        var baro = new SimBarometerDevice("baro-01", config);
+        baro.Initialize();
+
+        var results = new List<BarometerData>();
+        for (int i = 0; i < 100; i++)
+        {
+            baro.Update(TimeSpan.FromMilliseconds(10));
+            results.Add(baro.Read());
+        }
+
+        return results;
+    }
 }

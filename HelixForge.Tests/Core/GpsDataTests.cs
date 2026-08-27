@@ -14,6 +14,14 @@ public class GpsDataTests
         Assert.Equal(10.5, data.Altitude);
         Assert.Equal(new Vector3(1, 2, 3), data.Velocity);
         Assert.Equal(TimeSpan.FromSeconds(2), data.Timestamp);
+        Assert.Equal(GpsFixStatus.Fix3D, data.FixStatus); // default
+    }
+
+    [Fact]
+    public void Constructor_WithFixStatus_SetsFixStatus()
+    {
+        var data = new GpsData(37.7749, -122.4194, 10.5, Vector3.Zero, TimeSpan.FromSeconds(1), GpsFixStatus.NoFix);
+        Assert.Equal(GpsFixStatus.NoFix, data.FixStatus);
     }
 
     [Fact]

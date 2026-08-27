@@ -11,7 +11,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;Simulation;Robotics;UAV;Deterministic;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Deterministic time-step simulation engine with seeded noise, drift, and response models for IMU, GPS, and motor devices; per-run iteration limits.</PackageReleaseNotes>
+    <PackageReleaseNotes>Adds SimMagDevice, SimBarometerDevice, and SimServoDevice; GPS signal-loss (dropout) behavior with fix status; enhanced IMU bias-instability and temperature-correlated drift.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

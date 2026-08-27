@@ -19,4 +19,16 @@ public sealed class GpsSimConfig
 
     /// <summary>Random seed for deterministic noise generation. Null uses system clock.</summary>
     public int? RandomSeed { get; set; }
+
+    /// <summary>Base fix status when not in a dropout window. Default is Fix3D.</summary>
+    public GpsFixStatus BaseFixStatus { get; set; } = GpsFixStatus.Fix3D;
+
+    /// <summary>Probability per second of entering a dropout window. Default is 0.0 (no dropouts).</summary>
+    public double DropoutRate { get; set; } = 0.0;
+
+    /// <summary>Maximum duration of a single dropout window in seconds. Default is 1.0.</summary>
+    public double MaxDropoutDuration { get; set; } = 1.0;
+
+    /// <summary>Position noise applied during a dropout window, in meters. Default is 50.0.</summary>
+    public double UncertaintyDuringDropout { get; set; } = 50.0;
 }

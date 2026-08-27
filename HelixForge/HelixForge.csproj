@@ -11,7 +11,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;HardwareAbstraction;Simulation;Robotics;UAV;Telemetry;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Unified device abstraction layer: typed sensor and actuator interfaces, zero-allocation ImuData/GpsData/Vector3 value types, and a type-safe DeviceRegistry.</PackageReleaseNotes>
+    <PackageReleaseNotes>Adds IMagnetometerDevice/MagData, IBarometerDevice/BarometerData, and IServoDevice abstractions; adds GpsFixStatus to GpsData; DeviceRegistry now resolves concrete device types.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

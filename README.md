@@ -45,6 +45,11 @@ The entire domain model lives in `HelixForge` — **core abstractions with zero 
 │  │  ImuData       │  │  GpsData       │  │  .Throttle     │  │
 │  └────────────────┘  └────────────────┘  └────────────────┘  │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
+│  │IMagnetometerDev│  │IBarometerDevice│  │  IServoDevice  │  │
+│  │  .Read()       │  │  .Read()       │  │  .SetAngle()   │  │
+│  │  MagData       │  │  BarometerData │  │  .Angle        │  │
+│  └────────────────┘  └────────────────┘  └────────────────┘  │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
 │  │    Vector3     │  │ DeviceRegistry │  │ITelemetryPub   │  │
 │  │  .X, .Y, .Z    │  │  .Register()   │  │  .Publish()    │  │
 │  │  +, -, *, Dot  │  │  .GetById()    │  │                │  │
@@ -173,8 +178,8 @@ The delegate sink pattern makes it trivial to write telemetry to any backend.
 
 | Package | Description |
 |---|---|
-| **HelixForge** | Core abstractions: `IDevice`, `ISensor`, `IActuator`, `IImuDevice`, `IGpsDevice`, `IMotorDevice`, `Vector3`, `ImuData`, `GpsData`, `DeviceRegistry`, `ITelemetryPublisher` |
-| **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimGpsDevice`, configurable noise and drift models |
+| **HelixForge** | Core abstractions: `IDevice`, `ISensor`, `IActuator`, `IImuDevice`, `IGpsDevice`, `IMagnetometerDevice`, `IBarometerDevice`, `IMotorDevice`, `IServoDevice`, `Vector3`, `ImuData`, `GpsData`, `MagData`, `BarometerData`, `GpsFixStatus`, `DeviceRegistry`, `ITelemetryPublisher` |
+| **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimServoDevice`, `SimGpsDevice`, `SimMagDevice`, `SimBarometerDevice`, configurable noise, drift, and dropout models |
 | **HelixForge.Telemetry** | Telemetry bus: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `ITelemetrySink` |
 | **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC — more drivers coming in future releases |
 
@@ -277,15 +282,44 @@ double t = motor.Throttle;  // current throttle
 ```
 
 ### `IGpsDevice`
-Specialized sensor: position and velocity.
+Specialized sensor: position, velocity, and fix quality.
 
 ```csharp
 var gps = registry.GetByType<IGpsDevice>();
 GpsData data = gps.Read();
-double lat = data.Latitude;     // decimal degrees
+double lat = data.Latitude;          // decimal degrees
 double lon = data.Longitude;
-double alt = data.Altitude;     // meters
-Vector3 vel = data.Velocity;    // m/s
+double alt = data.Altitude;          // meters
+Vector3 vel = data.Velocity;         // m/s
+GpsFixStatus fix = data.FixStatus;   // NoFix / Fix2D / Fix3D
+```
+
+### `IMagnetometerDevice`
+Specialized sensor: magnetic field strength in the body frame.
+
+```csharp
+var mag = registry.GetByType<IMagnetometerDevice>();
+MagData data = mag.Read();
+Vector3 field = data.MagneticField;  // microteslas (µT)
+```
+
+### `IBarometerDevice`
+Specialized sensor: atmospheric pressure and barometric altitude.
+
+```csharp
+var baro = registry.GetByType<IBarometerDevice>();
+BarometerData data = baro.Read();
+double pressure = data.Pressure;     // hPa
+double altitude = data.Altitude;     // meters (barometric)
+```
+
+### `IServoDevice`
+Specialized actuator: positional angle control with slew-rate dynamics.
+
+```csharp
+var servo = registry.GetByType<IServoDevice>();
+servo.SetAngle(90.0);   // degrees (clamped to limits)
+double a = servo.Angle; // current achieved angle
 ```
 
 ### `Vector3`
@@ -344,7 +378,8 @@ bus.Dispose();
 - Device interfaces, value types, device registry, telemetry bus
 
 ### Phase 2 — Simulation ✓
-- Deterministic simulation engine, IMU/GPS/motor models, noise and drift, PID demo
+- Deterministic simulation engine, IMU/GPS/magnetometer/barometer/motor/servo models, noise and drift, PID demo
+- Per-device console samples via `--sample <mag|baro|servo|gps>`
 
 ### Phase 3 — Hardware Drivers ✓
 - Real IMU driver (BMI160, I2C), GPS driver (NMEA), ESC driver (PWM)

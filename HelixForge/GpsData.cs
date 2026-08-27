@@ -22,19 +22,24 @@ public readonly struct GpsData : IEquatable<GpsData>
     /// <summary>Time of this reading.</summary>
     public TimeSpan Timestamp { get; }
 
+    /// <summary>Quality of the position fix at this reading.</summary>
+    public GpsFixStatus FixStatus { get; }
+
     /// <summary>Creates a new GPS data snapshot.</summary>
     /// <param name="latitude">Latitude in decimal degrees.</param>
     /// <param name="longitude">Longitude in decimal degrees.</param>
     /// <param name="altitude">Altitude in meters.</param>
     /// <param name="velocity">Velocity vector in meters per second.</param>
     /// <param name="timestamp">Time of this reading.</param>
-    public GpsData(double latitude, double longitude, double altitude, Vector3 velocity, TimeSpan timestamp)
+    /// <param name="fixStatus">Quality of the position fix. Defaults to a full 3D fix.</param>
+    public GpsData(double latitude, double longitude, double altitude, Vector3 velocity, TimeSpan timestamp, GpsFixStatus fixStatus = GpsFixStatus.Fix3D)
     {
         Latitude = latitude;
         Longitude = longitude;
         Altitude = altitude;
         Velocity = velocity;
         Timestamp = timestamp;
+        FixStatus = fixStatus;
     }
 
     /// <summary>An empty GPS reading with zero values.</summary>
@@ -47,7 +52,8 @@ public readonly struct GpsData : IEquatable<GpsData>
             && Longitude.Equals(other.Longitude)
             && Altitude.Equals(other.Altitude)
             && Velocity.Equals(other.Velocity)
-            && Timestamp.Equals(other.Timestamp);
+            && Timestamp.Equals(other.Timestamp)
+            && FixStatus == other.FixStatus;
     }
 
     /// <inheritdoc />
@@ -64,11 +70,12 @@ public readonly struct GpsData : IEquatable<GpsData>
             hash = hash * 31 + Altitude.GetHashCode();
             hash = hash * 31 + Velocity.GetHashCode();
             hash = hash * 31 + Timestamp.GetHashCode();
+            hash = hash * 31 + FixStatus.GetHashCode();
             return hash;
         }
     }
 
     /// <inheritdoc />
     public override string ToString() =>
-        $"GpsData[Lat={Latitude:F6}, Lon={Longitude:F6}, Alt={Altitude:F2}m, T={Timestamp.TotalMilliseconds:F1}ms]";
+        $"GpsData[Lat={Latitude:F6}, Lon={Longitude:F6}, Alt={Altitude:F2}m, Fix={FixStatus}, T={Timestamp.TotalMilliseconds:F1}ms]";
 }

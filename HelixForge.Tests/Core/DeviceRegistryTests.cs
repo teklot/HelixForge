@@ -116,4 +116,31 @@ public class DeviceRegistryTests
         var all = registry.GetAllDevices();
         Assert.Equal(2, all.Count);
     }
+
+    [Fact]
+    public void GetByType_ResolvesConcreteType()
+    {
+        var registry = new DeviceRegistry();
+        var motor = new SimMotorDevice("motor-01", new MotorSimConfig());
+        registry.Register(motor);
+
+        var byInterface = registry.GetByType<IMotorDevice>();
+        var byConcrete = registry.GetByType<SimMotorDevice>();
+
+        Assert.Same(motor, byInterface);
+        Assert.Same(motor, byConcrete);
+    }
+
+    [Fact]
+    public void GetAllByType_ResolvesConcreteType()
+    {
+        var registry = new DeviceRegistry();
+        var motor1 = new SimMotorDevice("motor-01", new MotorSimConfig());
+        var motor2 = new SimMotorDevice("motor-02", new MotorSimConfig());
+        registry.Register(motor1);
+        registry.Register(motor2);
+
+        var concrete = registry.GetAllByType<SimMotorDevice>().ToList();
+        Assert.Equal(2, concrete.Count);
+    }
 }

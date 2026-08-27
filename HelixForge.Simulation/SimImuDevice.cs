@@ -15,6 +15,8 @@ public sealed class SimImuDevice : IImuDevice
     private Vector3 _acceleration;
     private Vector3 _accelDrift;
     private Vector3 _gyroDrift;
+    private Vector3 _accelBiasInstability;
+    private Vector3 _gyroBiasInstability;
     private TimeSpan _currentTime;
     private bool _initialized;
 
@@ -34,6 +36,8 @@ public sealed class SimImuDevice : IImuDevice
         _acceleration = new Vector3(0, 0, -9.81);
         _accelDrift = Vector3.Zero;
         _gyroDrift = Vector3.Zero;
+        _accelBiasInstability = Vector3.Zero;
+        _gyroBiasInstability = Vector3.Zero;
     }
 
     /// <inheritdoc/>
@@ -64,6 +68,8 @@ public sealed class SimImuDevice : IImuDevice
         _acceleration = new Vector3(0, 0, -9.81);
         _accelDrift = Vector3.Zero;
         _gyroDrift = Vector3.Zero;
+        _accelBiasInstability = Vector3.Zero;
+        _gyroBiasInstability = Vector3.Zero;
         _currentTime = TimeSpan.Zero;
         LatestReading = new ImuData(_orientation, _angularVelocity, _acceleration, _currentTime);
     }
@@ -87,20 +93,38 @@ public sealed class SimImuDevice : IImuDevice
             _gyroDrift.Y + _config.GyroscopeDrift * dt * GaussianRandom(),
             _gyroDrift.Z + _config.GyroscopeDrift * dt * GaussianRandom());
 
+        _accelBiasInstability = new Vector3(
+            _accelBiasInstability.X + _config.BiasInstability * Math.Sqrt(dt) * GaussianRandom(),
+            _accelBiasInstability.Y + _config.BiasInstability * Math.Sqrt(dt) * GaussianRandom(),
+            _accelBiasInstability.Z + _config.BiasInstability * Math.Sqrt(dt) * GaussianRandom());
+
+        _gyroBiasInstability = new Vector3(
+            _gyroBiasInstability.X + _config.BiasInstability * Math.Sqrt(dt) * GaussianRandom(),
+            _gyroBiasInstability.Y + _config.BiasInstability * Math.Sqrt(dt) * GaussianRandom(),
+            _gyroBiasInstability.Z + _config.BiasInstability * Math.Sqrt(dt) * GaussianRandom());
+
         _orientation = new Vector3(
             _orientation.X + _angularVelocity.X * dt,
             _orientation.Y + _angularVelocity.Y * dt,
             _orientation.Z + _angularVelocity.Z * dt);
 
+        double tempDelta = _config.Temperature - _config.OperatingTemperature;
+        double tempBias = _config.TemperatureCoefficient * tempDelta;
+        var tempCorrection = new Vector3(tempBias, tempBias, tempBias);
+
+        double biasDt = Math.Sqrt(dt);
+        var totalAccelBias = _accelDrift + _accelBiasInstability;
+        var totalGyroBias = _gyroDrift + _gyroBiasInstability + tempCorrection * biasDt;
+
         var noisyAccel = new Vector3(
-            _acceleration.X + _accelDrift.X + _config.AccelerometerNoise * GaussianRandom(),
-            _acceleration.Y + _accelDrift.Y + _config.AccelerometerNoise * GaussianRandom(),
-            _acceleration.Z + _accelDrift.Z + _config.AccelerometerNoise * GaussianRandom());
+            _acceleration.X + totalAccelBias.X + _config.AccelerometerNoise * GaussianRandom(),
+            _acceleration.Y + totalAccelBias.Y + _config.AccelerometerNoise * GaussianRandom(),
+            _acceleration.Z + totalAccelBias.Z + _config.AccelerometerNoise * GaussianRandom());
 
         var noisyAngVel = new Vector3(
-            _angularVelocity.X + _gyroDrift.X + _config.GyroscopeNoise * GaussianRandom(),
-            _angularVelocity.Y + _gyroDrift.Y + _config.GyroscopeNoise * GaussianRandom(),
-            _angularVelocity.Z + _gyroDrift.Z + _config.GyroscopeNoise * GaussianRandom());
+            _angularVelocity.X + totalGyroBias.X + _config.GyroscopeNoise * GaussianRandom(),
+            _angularVelocity.Y + totalGyroBias.Y + _config.GyroscopeNoise * GaussianRandom(),
+            _angularVelocity.Z + totalGyroBias.Z + _config.GyroscopeNoise * GaussianRandom());
 
         LatestReading = new ImuData(_orientation, noisyAngVel, noisyAccel, _currentTime);
     }

@@ -94,4 +94,69 @@ public class SimImuDeviceTests
         var imu = new SimImuDevice("my-imu", new ImuSimConfig());
         Assert.Equal("my-imu", imu.DeviceId);
     }
+
+    [Fact]
+    public void BiasInstability_AccumulatesOverTime()
+    {
+        var config = new ImuSimConfig
+        {
+            AccelerometerNoise = 0.0,
+            GyroscopeNoise = 0.0,
+            BiasInstability = 0.1,
+            RandomSeed = 42
+        };
+        var imu = new SimImuDevice("imu-01", config);
+        imu.Initialize();
+
+        imu.Update(TimeSpan.FromSeconds(1));
+
+        var data = imu.Read();
+        // Bias instability random-walks the gyro readings away from their true value (0)
+        Assert.NotEqual(0.0, data.AngularVelocity.X, 4);
+    }
+
+    [Fact]
+    public void TemperatureCoefficient_AddsGyroBias()
+    {
+        var config = new ImuSimConfig
+        {
+            AccelerometerNoise = 0.0,
+            GyroscopeNoise = 0.0,
+            TemperatureCoefficient = 0.01,
+            OperatingTemperature = 25.0,
+            Temperature = 50.0, // 25 deg above operating point
+            RandomSeed = 42
+        };
+        var imu = new SimImuDevice("imu-01", config);
+        imu.Initialize();
+
+        imu.Update(TimeSpan.FromSeconds(1));
+
+        var data = imu.Read();
+        // 25 deg * 0.01 = 0.25 rad/s gyro bias (plus noise=0)
+        Assert.InRange(data.AngularVelocity.X, 0.2, 0.3);
+    }
+
+    [Fact]
+    public void TemperatureCoefficient_AtOperatingPoint_AddsNoBias()
+    {
+        var config = new ImuSimConfig
+        {
+            AccelerometerNoise = 0.0,
+            GyroscopeNoise = 0.0,
+            AccelerometerDrift = 0.0,
+            GyroscopeDrift = 0.0,
+            TemperatureCoefficient = 0.01,
+            OperatingTemperature = 25.0,
+            Temperature = 25.0, // at operating point
+            RandomSeed = 42
+        };
+        var imu = new SimImuDevice("imu-01", config);
+        imu.Initialize();
+
+        imu.Update(TimeSpan.FromSeconds(1));
+
+        var data = imu.Read();
+        Assert.Equal(0.0, data.AngularVelocity.X, 4);
+    }
 }
