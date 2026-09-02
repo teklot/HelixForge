@@ -11,7 +11,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;Simulation;Robotics;UAV;Deterministic;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Adds SimMagDevice, SimBarometerDevice, and SimServoDevice; GPS signal-loss (dropout) behavior with fix status; enhanced IMU bias-instability and temperature-correlated drift.</PackageReleaseNotes>
+    <PackageReleaseNotes>Adds SimBatteryDevice with sag/capacity from an ICurrentConsumer load, device-scoped EnvironmentSimConfig (wind/turbulence), MotorMixer quad-X helper, and SimDifferentialDriveDevice odometry.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

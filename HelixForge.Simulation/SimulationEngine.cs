@@ -56,6 +56,9 @@ public sealed class SimulationEngine
         foreach (var servo in _registry.GetAllByType<SimServoDevice>())
             servo.Update(_config.TimeStep);
 
+        foreach (var drive in _registry.GetAllByType<SimDifferentialDriveDevice>())
+            drive.Update(_config.TimeStep);
+
         _currentTime += _config.TimeStep;
         _stepCount++;
 
@@ -155,6 +158,24 @@ public sealed class SimulationEngine
             var data = barometer.Read();
             _telemetry.Publish(barometer.DeviceId, "pressure", data.Pressure, _currentTime);
             _telemetry.Publish(barometer.DeviceId, "altitude", data.Altitude, _currentTime);
+        }
+
+        foreach (var battery in _registry.GetAllByType<IBatteryDevice>())
+        {
+            var data = battery.Read();
+            _telemetry.Publish(battery.DeviceId, "voltage", data.Voltage, _currentTime);
+            _telemetry.Publish(battery.DeviceId, "current", data.Current, _currentTime);
+            _telemetry.Publish(battery.DeviceId, "soc", data.ChargeFraction, _currentTime);
+        }
+
+        foreach (var drive in _registry.GetAllByType<IDifferentialDriveDevice>())
+        {
+            var data = drive.Read();
+            _telemetry.Publish(drive.DeviceId, "pose.x", data.Pose.X, _currentTime);
+            _telemetry.Publish(drive.DeviceId, "pose.y", data.Pose.Y, _currentTime);
+            _telemetry.Publish(drive.DeviceId, "pose.yaw", data.Pose.Yaw, _currentTime);
+            _telemetry.Publish(drive.DeviceId, "linear_speed", data.LinearSpeed, _currentTime);
+            _telemetry.Publish(drive.DeviceId, "angular_speed", data.AngularSpeed, _currentTime);
         }
     }
 }

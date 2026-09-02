@@ -34,4 +34,7 @@ public sealed class ImuSimConfig
 
     /// <summary>Current simulated temperature in degrees Celsius. Default is 25.0.</summary>
     public double Temperature { get; set; } = 25.0;
+
+    /// <summary>Optional device-scoped environment model adding wind-induced turbulence to acceleration. Default is null.</summary>
+    public EnvironmentSimConfig? Environment { get; set; }
 }

@@ -19,4 +19,7 @@ public sealed class BarometerSimConfig
 
     /// <summary>Random seed for deterministic noise generation. Null uses system clock.</summary>
     public int? RandomSeed { get; set; }
+
+    /// <summary>Optional device-scoped environment model providing a reference altitude base. Default is null.</summary>
+    public EnvironmentSimConfig? Environment { get; set; }
 }

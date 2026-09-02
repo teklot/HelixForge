@@ -11,6 +11,40 @@ HelixForge is a shared abstraction layer for hardware on .NET — **the vocabula
 
 **Guiding principle:** Simulation must never depend on telemetry. Telemetry must never affect behavior.
 
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [How It Works](#how-it-works)
+  - [Devices? No Magic Strings](#devices-no-magic-strings)
+  - [Simulation Without Coupling](#simulation-without-coupling)
+  - [Telemetry as a Side-Channel](#telemetry-as-a-side-channel)
+  - [Deterministic Execution](#deterministic-execution)
+- [Use Cases](#use-cases)
+  - [Control Algorithm Development](#control-algorithm-development)
+  - [Hardware-in-the-Loop Testing](#hardware-in-the-loop-testing)
+  - [Regression Testing](#regression-testing)
+  - [Telemetry Archival](#telemetry-archival)
+- [Technical Differentiators](#technical-differentiators)
+- [Packages](#packages)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Domain Model](#domain-model)
+  - [`IDevice`](#idevice)
+  - [`ISensor`](#isensor)
+  - [`IImuDevice`](#iimuDevice)
+  - [`IMotorDevice`](#imotordevice)
+  - [`IGpsDevice`](#igpsdevice)
+  - [`IMagnetometerDevice`](#imagnetometerdevice)
+  - [`IBarometerDevice`](#ibarometerdevice)
+  - [`IServoDevice`](#iservodevice)
+  - [`IBatteryDevice`](#ibatterydevice)
+  - [`IDifferentialDriveDevice`](#idifferentialdrivedevice)
+  - [`Vector3`](#vector3)
+  - [`DeviceRegistry`](#deviceregistry)
+  - [`SimulationEngine`](#simulationengine)
+  - [`TelemetryBus`](#telemetrybus)
+- [Supported Frameworks](#supported-frameworks)
+
 ## The Problem
 
 ```csharp
@@ -178,8 +212,8 @@ The delegate sink pattern makes it trivial to write telemetry to any backend.
 
 | Package | Description |
 |---|---|
-| **HelixForge** | Core abstractions: `IDevice`, `ISensor`, `IActuator`, `IImuDevice`, `IGpsDevice`, `IMagnetometerDevice`, `IBarometerDevice`, `IMotorDevice`, `IServoDevice`, `Vector3`, `ImuData`, `GpsData`, `MagData`, `BarometerData`, `GpsFixStatus`, `DeviceRegistry`, `ITelemetryPublisher` |
-| **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimServoDevice`, `SimGpsDevice`, `SimMagDevice`, `SimBarometerDevice`, configurable noise, drift, and dropout models |
+| **HelixForge** | Core abstractions: `IDevice`, `ISensor`, `IActuator`, `IImuDevice`, `IGpsDevice`, `IMagnetometerDevice`, `IBarometerDevice`, `IMotorDevice`, `IServoDevice`, `IBatteryDevice`, `IDifferentialDriveDevice`, `Vector3`, `ImuData`, `GpsData`, `MagData`, `BarometerData`, `BatteryData`, `Pose2D`, `GpsFixStatus`, `DeviceRegistry`, `ITelemetryPublisher` |
+| **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimServoDevice`, `SimGpsDevice`, `SimMagDevice`, `SimBarometerDevice`, `SimBatteryDevice`, `SimDifferentialDriveDevice`, `MotorMixer`, `SimulationConfig`, configurable noise, drift, dropout, and environment models |
 | **HelixForge.Telemetry** | Telemetry bus: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `ITelemetrySink` |
 | **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC — more drivers coming in future releases |
 
@@ -322,6 +356,28 @@ servo.SetAngle(90.0);   // degrees (clamped to limits)
 double a = servo.Angle; // current achieved angle
 ```
 
+### `IBatteryDevice`
+Specialized sensor: terminal voltage, current draw, and state of charge.
+
+```csharp
+var battery = registry.GetByType<IBatteryDevice>();
+BatteryData data = battery.Read();
+double v = data.Voltage;         // volts (includes sag)
+double soc = data.ChargeFraction; // 0.0 .. 1.0
+```
+
+Consumers that implement `ICurrentConsumer` (e.g. `SimMotorDevice`) drive the
+battery's sag and capacity drain.
+
+### `IDifferentialDriveDevice`
+Specialized actuator: differential-drive kinematic odometry from wheel speeds.
+
+```csharp
+var drive = registry.GetByType<IDifferentialDriveDevice>();
+drive.SetTargetSpeeds(0.5, 0.5);   // left / right wheel speed (m/s)
+Pose2D pose = drive.Read().Pose;   // X, Y, Yaw
+```
+
 ### `Vector3`
 Immutable 3D vector with arithmetic, dot product, cross product, lerp, and normalization.
 
@@ -371,19 +427,3 @@ bus.Dispose();
 
 - **.NET 10+**: Optimized for maximum performance and Native AOT compatibility.
 - **.NET Standard 2.0**: Broad compatibility across legacy .NET platforms.
-
-## Roadmap
-
-### Phase 1 — Core Abstractions ✓
-- Device interfaces, value types, device registry, telemetry bus
-
-### Phase 2 — Simulation ✓
-- Deterministic simulation engine, IMU/GPS/magnetometer/barometer/motor/servo models, noise and drift, PID demo
-- Per-device console samples via `--sample <mag|baro|servo|gps>`
-
-### Phase 3 — Hardware Drivers ✓
-- Real IMU driver (BMI160, I2C), GPS driver (NMEA), ESC driver (PWM)
-- Future: SPI IMU, DShot ESC, UBX GPS, additional chips
-
-### Phase 4 — Control Library (planned)
-- Built-in PID controller, LQR, state estimation, trajectory generation

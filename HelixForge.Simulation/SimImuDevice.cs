@@ -117,9 +117,9 @@ public sealed class SimImuDevice : IImuDevice
         var totalGyroBias = _gyroDrift + _gyroBiasInstability + tempCorrection * biasDt;
 
         var noisyAccel = new Vector3(
-            _acceleration.X + totalAccelBias.X + _config.AccelerometerNoise * GaussianRandom(),
-            _acceleration.Y + totalAccelBias.Y + _config.AccelerometerNoise * GaussianRandom(),
-            _acceleration.Z + totalAccelBias.Z + _config.AccelerometerNoise * GaussianRandom());
+            _acceleration.X + totalAccelBias.X + _config.AccelerometerNoise * GaussianRandom() + TurbulenceAccel(dt, 0),
+            _acceleration.Y + totalAccelBias.Y + _config.AccelerometerNoise * GaussianRandom() + TurbulenceAccel(dt, 1),
+            _acceleration.Z + totalAccelBias.Z + _config.AccelerometerNoise * GaussianRandom() + TurbulenceAccel(dt, 2));
 
         var noisyAngVel = new Vector3(
             _angularVelocity.X + totalGyroBias.X + _config.GyroscopeNoise * GaussianRandom(),
@@ -146,6 +146,24 @@ public sealed class SimImuDevice : IImuDevice
 
     /// <inheritdoc/>
     public void Dispose() { }
+
+    private double TurbulenceAccel(double dt, int axis)
+    {
+        var env = _config.Environment;
+        if (env == null || env.Turbulence <= 0.0)
+            return 0.0;
+
+        var wind = env.WindVelocity;
+        double windComponent = axis switch
+        {
+            0 => wind.X,
+            1 => wind.Y,
+            _ => wind.Z
+        };
+        // Wind adds a mean accel term; turbulence adds bounded random-walk noise.
+        double gust = env.WindGustNoise * Math.Sqrt(dt) * GaussianRandom();
+        return windComponent + env.Turbulence * Math.Sqrt(dt) * GaussianRandom() + gust;
+    }
 
     private double GaussianRandom()
     {

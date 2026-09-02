@@ -3,9 +3,9 @@ using System;
 namespace HelixForge.Simulation;
 
 /// <summary>
-/// Simulated motor/ESC device with configurable response dynamics.
+/// Simulated motor/ESC device with configurable response dynamics and current draw.
 /// </summary>
-public sealed class SimMotorDevice : IMotorDevice
+public sealed class SimMotorDevice : IMotorDevice, ICurrentConsumer
 {
     private readonly MotorSimConfig _config;
     private double _currentThrottle;
@@ -41,6 +41,9 @@ public sealed class SimMotorDevice : IMotorDevice
 
     /// <summary>Gets the current simulated RPM.</summary>
     public double CurrentRpm => _currentRpm;
+
+    /// <inheritdoc/>
+    public double Current => _currentThrottle * _config.MaxCurrentAmps;
 
     /// <inheritdoc/>
     public void Initialize()

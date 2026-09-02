@@ -16,4 +16,7 @@ public sealed class MotorSimConfig
 
     /// <summary>Initial throttle value. Default is 0.0.</summary>
     public double InitialThrottle { get; set; } = 0.0;
+
+    /// <summary>Current drawn at full throttle and full RPM, in amperes. Default is 0.0 (no draw).</summary>
+    public double MaxCurrentAmps { get; set; } = 0.0;
 }

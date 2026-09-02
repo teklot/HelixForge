@@ -27,6 +27,9 @@ public sealed class SimBarometerDevice : IBarometerDevice
         _random = random ?? new Random(config.RandomSeed ?? Environment.TickCount);
         _altitude = config.InitialAltitude;
         _drift = 0.0;
+
+        if (config.Environment != null)
+            _altitude = config.Environment.ReferenceAltitudeMeters;
     }
 
     /// <inheritdoc/>

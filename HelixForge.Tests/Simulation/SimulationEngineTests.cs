@@ -181,6 +181,10 @@ public class SimulationEngineTests
         registry.Register(new SimBarometerDevice("baro-01", new BarometerSimConfig()));
         registry.Register(new SimServoDevice("servo-01", new ServoSimConfig()));
         registry.Register(new SimGpsDevice("gps-01", new GpsSimConfig()));
+        registry.Register(new SimBatteryDevice("batt-01", new BatterySimConfig()));
+        var drive = new SimDifferentialDriveDevice("dd-01", new DifferentialDriveSimConfig());
+        drive.Initialize();
+        registry.Register(drive);
 
         var telemetry = new HelixForge.Telemetry.TelemetryBus();
         var events = new List<HelixForge.Telemetry.TelemetryEvent>();
@@ -196,7 +200,29 @@ public class SimulationEngineTests
         Assert.Contains(events, e => e.DeviceId == "baro-01" && e.MetricName == "altitude");
         Assert.Contains(events, e => e.DeviceId == "servo-01" && e.MetricName == "angle");
         Assert.Contains(events, e => e.DeviceId == "gps-01" && e.MetricName == "fix_status");
+        Assert.Contains(events, e => e.DeviceId == "batt-01" && e.MetricName == "voltage");
+        Assert.Contains(events, e => e.DeviceId == "batt-01" && e.MetricName == "soc");
+        Assert.Contains(events, e => e.DeviceId == "dd-01" && e.MetricName == "pose.x");
+        Assert.Contains(events, e => e.DeviceId == "dd-01" && e.MetricName == "linear_speed");
 
         telemetry.Dispose();
+    }
+
+    [Fact]
+    public void Step_UpdatesDifferentialDriveDevice()
+    {
+        var registry = new DeviceRegistry();
+        var drive = new SimDifferentialDriveDevice("dd-01", new DifferentialDriveSimConfig());
+        drive.Initialize();
+        registry.Register(drive);
+
+        var config = new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10) };
+        var engine = new SimulationEngine(registry, null, config);
+
+        drive.SetTargetSpeeds(1.0, 1.0);
+        engine.Step();
+
+        // 1 m/s for 10ms = 0.01m of forward travel.
+        Assert.Equal(0.01, drive.Read().Pose.X, 4);
     }
 }

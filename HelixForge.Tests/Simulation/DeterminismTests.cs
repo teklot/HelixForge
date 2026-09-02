@@ -178,4 +178,84 @@ public class DeterminismTests
 
         return results;
     }
+
+    [Fact]
+    public void Battery_BatteryData_TracksExpectation()
+    {
+        var config = new BatterySimConfig
+        {
+            FullVoltage = 12.6,
+            EmptyVoltage = 9.0,
+            InternalResistance = 0.1,
+            CapacityAh = 1.0,
+            InitialCharge = 1.0
+        };
+        var battery = new SimBatteryDevice("batt-01", config, new ICurrentConsumer[] { new ConstConsumer(2.0) });
+        battery.Initialize();
+        battery.Update(TimeSpan.FromSeconds(1800)); // 0.5h at 2A = 1.0Ah of 1.0Ah -> empty
+
+        var data = battery.Read();
+        Assert.Equal(0.0, data.ChargeFraction, 6);
+    }
+
+    [Fact]
+    public void Environment_Gps_SameSeed_ProducesIdenticalReadings()
+    {
+        var r1 = RunEnvGpsSimulation(seed: 5);
+        var r2 = RunEnvGpsSimulation(seed: 5);
+
+        Assert.Equal(r1.Count, r2.Count);
+        for (int i = 0; i < r1.Count; i++)
+            Assert.Equal(r1[i], r2[i]);
+    }
+
+    [Fact]
+    public void DifferentialDrive_Deterministic_EqualSpeeds()
+    {
+        var config = new DifferentialDriveSimConfig { OdometryNoise = 0.0 };
+        var drive = new SimDifferentialDriveDevice("dd-01", config);
+        drive.Initialize();
+        drive.SetTargetSpeeds(1.0, 1.0);
+        drive.Update(TimeSpan.FromSeconds(1));
+
+        var data = drive.Read();
+        Assert.Equal(1.0, data.Pose.X, 6);
+        Assert.Equal(0.0, data.Pose.Y, 6);
+    }
+
+    private List<GpsData> RunEnvGpsSimulation(int seed)
+    {
+        var env = new EnvironmentSimConfig
+        {
+            WindVelocity = new Vector3(2.0, -1.0, 0.0),
+            WindGustNoise = 0.5,
+            Turbulence = 1.0,
+            ReferenceAltitudeMeters = 100.0,
+            RandomSeed = seed
+        };
+        var gpsConfig = new GpsSimConfig
+        {
+            PositionNoise = 0.0,
+            RandomSeed = seed,
+            Environment = env
+        };
+        var gps = new SimGpsDevice("gps-01", gpsConfig);
+        gps.Initialize();
+
+        var results = new List<GpsData>();
+        for (int i = 0; i < 100; i++)
+        {
+            gps.Update(TimeSpan.FromMilliseconds(10));
+            results.Add(gps.Read());
+        }
+
+        return results;
+    }
+
+    private sealed class ConstConsumer : ICurrentConsumer
+    {
+        private readonly double _c;
+        public ConstConsumer(double c) => _c = c;
+        public double Current => _c;
+    }
 }

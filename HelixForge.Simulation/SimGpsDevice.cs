@@ -36,6 +36,9 @@ public sealed class SimGpsDevice : IGpsDevice
         _velocity = Vector3.Zero;
         _fixStatus = config.BaseFixStatus;
         _dropoutRemaining = 0.0;
+
+        if (config.Environment != null)
+            _altitude = config.Environment.ReferenceAltitudeMeters;
     }
 
     /// <inheritdoc/>
@@ -86,17 +89,23 @@ public sealed class SimGpsDevice : IGpsDevice
         double metersPerDegreeLat = 111320.0;
         double metersPerDegreeLon = 111320.0 * Math.Cos(_latitude * Math.PI / 180.0);
 
-        _latitude += (_velocity.X * dt) / metersPerDegreeLat;
-        _longitude += (_velocity.Y * dt) / metersPerDegreeLon;
-        _altitude += _velocity.Z * dt;
+        Vector3 wind = _config.Environment?.WindVelocity ?? Vector3.Zero;
+
+        _latitude += ((_velocity.X + wind.X) * dt) / metersPerDegreeLat;
+        _longitude += ((_velocity.Y + wind.Y) * dt) / metersPerDegreeLon;
+        _altitude += (_velocity.Z + wind.Z) * dt;
 
         double effectiveNoise = _dropoutRemaining > 0.0
             ? _config.UncertaintyDuringDropout
             : _config.PositionNoise;
 
-        double noiseLat = effectiveNoise * GaussianRandom() / metersPerDegreeLat;
-        double noiseLon = effectiveNoise * GaussianRandom() / metersPerDegreeLon;
-        double noiseAlt = effectiveNoise * GaussianRandom();
+        double turbulence = _config.Environment?.Turbulence ?? 0.0;
+        double gust = _config.Environment?.WindGustNoise ?? 0.0;
+        double noiseSd = effectiveNoise + (turbulence + gust) * Math.Sqrt(dt);
+
+        double noiseLat = noiseSd * GaussianRandom() / metersPerDegreeLat;
+        double noiseLon = noiseSd * GaussianRandom() / metersPerDegreeLon;
+        double noiseAlt = noiseSd * GaussianRandom();
 
         LatestReading = new GpsData(
             _latitude + noiseLat,

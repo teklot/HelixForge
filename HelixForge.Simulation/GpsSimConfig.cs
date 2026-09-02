@@ -31,4 +31,7 @@ public sealed class GpsSimConfig
 
     /// <summary>Position noise applied during a dropout window, in meters. Default is 50.0.</summary>
     public double UncertaintyDuringDropout { get; set; } = 50.0;
+
+    /// <summary>Optional device-scoped environment model adding wind to velocity and reference altitude. Default is null.</summary>
+    public EnvironmentSimConfig? Environment { get; set; }
 }
