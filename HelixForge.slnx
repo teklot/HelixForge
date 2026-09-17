@@ -8,6 +8,7 @@
   <Project Path="HelixForge.Simulation/HelixForge.Simulation.csproj" />
   <Project Path="HelixForge.Telemetry/HelixForge.Telemetry.csproj" />
   <Project Path="HelixForge.Hardware/HelixForge.Hardware.csproj" />
+  <Project Path="HelixForge.Control/HelixForge.Control.csproj" />
   <Project Path="HelixForge.Tests/HelixForge.Tests.csproj" />
   <Project Path="HelixForge.Benchmark/HelixForge.Benchmark.csproj" />
   <Project Path="HelixForge.Console/HelixForge.Console.csproj" />

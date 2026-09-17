@@ -69,7 +69,7 @@ internal sealed class CliOptions
         System.Console.WriteLine();
         System.Console.WriteLine("Options:");
         System.Console.WriteLine("  (no arguments)                 Show the interactive options menu.");
-        System.Console.WriteLine("  --sample <mag|baro|servo|gps>  Run a per-device sample.");
+        System.Console.WriteLine("  --sample <mag|baro|servo|gps|control>  Run a per-device sample.");
         System.Console.WriteLine("  --mode <sim|real>              Run the golden-path demo in simulation (default) or on hardware.");
         System.Console.WriteLine("  --duration <seconds>           Length of the run (demo or sample). Default is 5.");
         System.Console.WriteLine("  --help, -h                     Show this help.");

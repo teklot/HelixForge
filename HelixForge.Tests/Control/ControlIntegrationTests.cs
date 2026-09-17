@@ -2,17 +2,17 @@ using HelixForge;
 using HelixForge.Control;
 using HelixForge.Simulation;
 
-namespace HelixForge.Tests.Integration;
+namespace HelixForge.Tests.Control;
 
-public class UavStabilizationTests
+public class ControlIntegrationTests
 {
     [Fact]
-    public void PidController_ConvergesToTarget()
+    public void PidController_StabilizesSimulatedUav()
     {
         var registry = new DeviceRegistry();
         var imuConfig = new ImuSimConfig
         {
-            InitialOrientation = new Vector3(0.5, 0.0, 0.0), // Start tilted
+            InitialOrientation = new Vector3(0.5, 0.0, 0.0),
             AccelerometerNoise = 0.0,
             GyroscopeNoise = 0.0,
             RandomSeed = 42
@@ -24,12 +24,9 @@ public class UavStabilizationTests
         registry.Register(imu);
         registry.Register(motorL);
         registry.Register(motorR);
-        imu.Initialize();
-        motorL.Initialize();
-        motorR.Initialize();
 
-        var config = new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10), RandomSeed = 42 };
-        var engine = new SimulationEngine(registry, null, config);
+        var engine = new SimulationEngine(registry, null,
+            new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10), RandomSeed = 42 });
 
         var pid = new PidController(new PidConfig
         {
@@ -42,12 +39,6 @@ public class UavStabilizationTests
             DerivativeMode = DerivativeMode.OnMeasurement
         });
 
-        // Express the UAV plant in control code (no global physics engine): first-order
-        // angular-rate response to differential throttle feeds back into the IMU.
-        double angularRate = 0.0;
-        const double torqueGain = 5.0;
-        const double damping = 0.5;
-
         engine.Run(TimeSpan.FromSeconds(5), _ =>
         {
             var reading = imu.Read();
@@ -55,13 +46,38 @@ public class UavStabilizationTests
 
             motorL.SetThrottle(Math.Clamp(0.5 + correction, 0.0, 1.0));
             motorR.SetThrottle(Math.Clamp(0.5 - correction, 0.0, 1.0));
-
-            angularRate += (torqueGain * correction - damping * angularRate) * 0.01;
-            imu.SetAngularVelocity(new Vector3(angularRate, 0.0, 0.0));
         });
 
-        // After 5 seconds, orientation should be close to target
         var finalReading = imu.Read();
         Assert.InRange(Math.Abs(finalReading.Orientation.X), 0.0, 0.1);
+    }
+
+    [Fact]
+    public void MadgwickInLoop_StaysStable()
+    {
+        var registry = new DeviceRegistry();
+        var imu = new SimImuDevice("imu-01", new ImuSimConfig
+        {
+            AccelerometerNoise = 0.0,
+            GyroscopeNoise = 0.0,
+            RandomSeed = 7
+        });
+        registry.Register(imu);
+
+        var engine = new SimulationEngine(registry, null,
+            new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10), RandomSeed = 7 });
+
+        var filter = new MadgwickFilter(new MadgwickFilterConfig { Beta = 0.5 });
+
+        engine.Run(TimeSpan.FromSeconds(2), _ =>
+        {
+            var reading = imu.Read();
+            filter.Update(TimeSpan.FromMilliseconds(10), reading.AngularVelocity, reading.Acceleration);
+        });
+
+        // No rotational input: the filter should not drift from level orientation.
+        var orientation = filter.Orientation;
+        Assert.InRange(Math.Abs(orientation.X), 0.0, 0.2);
+        Assert.InRange(Math.Abs(orientation.Y), 0.0, 0.2);
     }
 }

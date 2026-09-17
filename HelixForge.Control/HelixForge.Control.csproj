@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>HelixForge.Control</Title>
+    <Authors>TekLot,$(AssemblyName)</Authors>
+    <Description>Control library for HelixForge. PID controllers, attitude estimation (complementary and Madgwick filters), small-state Kalman filtering, and trapezoidal trajectory generation.</Description>
+    <Copyright>Copyright © 2026 TekLot</Copyright>
+    <PackageId>HelixForge.Control</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageTags>HelixForge;Control;Robotics;UAV;PID;Kalman;dotnet-library</PackageTags>
+    <PackageReleaseNotes>Adds PidController, complementary and Madgwick attitude estimators, a scalar Kalman filter, and trapezoidal trajectory profiles.</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HelixForge\HelixForge.csproj" />
+  </ItemGroup>
+
+</Project>

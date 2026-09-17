@@ -39,6 +39,10 @@ HelixForge is a shared abstraction layer for hardware on .NET — **the vocabula
   - [`IServoDevice`](#iservodevice)
   - [`IBatteryDevice`](#ibatterydevice)
   - [`IDifferentialDriveDevice`](#idifferentialdrivedevice)
+  - [`PidController`](#pidcontroller)
+  - [`Attitude Estimation`](#attitude-estimation)
+  - [`ScalarKalmanFilter`](#scalarkalmanfilter)
+  - [`TrapezoidalProfile`](#trapezoidalprofile)
   - [`Vector3`](#vector3)
   - [`DeviceRegistry`](#deviceregistry)
   - [`SimulationEngine`](#simulationengine)
@@ -61,38 +65,38 @@ No two implementations agree. IMUs return raw arrays in different orders. Motors
 
 ## How It Works
 
-The entire domain model lives in `HelixForge` — **core abstractions with zero simulation or telemetry dependencies.**
+The entire domain model lives in `HelixForge` — **core abstractions with zero simulation or telemetry dependencies.** Everything else ships in sibling packages: `HelixForge.Control` (algorithms), `HelixForge.Simulation` / `HelixForge.Hardware` (device implementations), and `HelixForge.Telemetry` (observability).
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        HelixForge                            │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
-│  │    IDevice     │  │    ISensor     │  │   IActuator    │  │
-│  │  .DeviceId     │  │  .Update(dt)   │  │  .IsActive     │  │
-│  │  .IsInitialized│  │  .Read<T>()    │  │                │  │
-│  │  .Initialize() │  │                │  │                │  │
-│  │  .Reset()      │  │                │  │                │  │
-│  └────────────────┘  └────────────────┘  └────────────────┘  │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
-│  │  IImuDevice    │  │  IGpsDevice    │  │  IMotorDevice  │  │
-│  │  .Read()       │  │  .Read()       │  │  .SetThrottle()│  │
-│  │  ImuData       │  │  GpsData       │  │  .Throttle     │  │
-│  └────────────────┘  └────────────────┘  └────────────────┘  │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
-│  │IMagnetometerDev│  │IBarometerDevice│  │  IServoDevice  │  │
-│  │  .Read()       │  │  .Read()       │  │  .SetAngle()   │  │
-│  │  MagData       │  │  BarometerData │  │  .Angle        │  │
-│  └────────────────┘  └────────────────┘  └────────────────┘  │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
-│  │    Vector3     │  │ DeviceRegistry │  │ITelemetryPub   │  │
-│  │  .X, .Y, .Z    │  │  .Register()   │  │  .Publish()    │  │
-│  │  +, -, *, Dot  │  │  .GetById()    │  │                │  │
-│  │  Cross, Lerp   │  │  .GetByType()  │  │                │  │
-│  └────────────────┘  └────────────────┘  └────────────────┘  │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │   ExecutionMode: Simulation = 0, Real = 1              │  │
-│  └────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                         Your Application                              │
+│                control code written against contracts                 │
+└───────────────────────────────────┬───────────────────────────────────┘
+                                    ▼
+┌───────────────────────────────────────────────────────────────────────┐
+│                    HelixForge (core contracts)                        │
+│   IDevice · ISensor · IActuator · ICurrentConsumer                    │
+│   IImuDevice · IGpsDevice · IMotorDevice · IServoDevice               │
+│   IMagnetometerDevice · IBarometerDevice · IBatteryDevice             │
+│   IDifferentialDriveDevice · Vector3 · DeviceRegistry                 │
+│   ITelemetryPublisher · ExecutionMode                                 │
+└───────────────────────────────────┬───────────────────────────────────┘
+                                    │
+         ┌──────────────────────────┼──────────────────────────┐
+         ▼                          ▼                          ▼
+┌────────────────┐      ┌──────────────────────────┐      ┌────────────────┐
+│ HelixForge.    │      │ HelixForge.Simulation    │      │ HelixForge.    │
+│ Control        │      │ Sim*Device classes       │      │ Telemetry      │
+│ PidController  │      │ SimulationEngine         │      │ TelemetryBus   │
+│ Complementary  │      │ HelixForge.Hardware      │      │ ConsoleSink    │
+│ Filter         │      │ I2C / UART / PWM drivers │      │ DelegateSink   │
+│ MadgwickFilter │      └──────────────────────────┘      └────────────────┘
+│ ScalarKalman   │
+│ Filter         │
+│ Trapezoidal    │
+│ Profile        │
+│ Quaternion     │
+└────────────────┘
 ```
 
 Every data type is **`readonly struct`** — zero-allocation on hot paths. `ImuData`, `GpsData`, and `Vector3` are all value types with structural equality, `IEquatable<T>`, and `GetHashCode`.
@@ -214,6 +218,7 @@ The delegate sink pattern makes it trivial to write telemetry to any backend.
 |---|---|
 | **HelixForge** | Core abstractions: `IDevice`, `ISensor`, `IActuator`, `IImuDevice`, `IGpsDevice`, `IMagnetometerDevice`, `IBarometerDevice`, `IMotorDevice`, `IServoDevice`, `IBatteryDevice`, `IDifferentialDriveDevice`, `Vector3`, `ImuData`, `GpsData`, `MagData`, `BarometerData`, `BatteryData`, `Pose2D`, `GpsFixStatus`, `DeviceRegistry`, `ITelemetryPublisher` |
 | **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimServoDevice`, `SimGpsDevice`, `SimMagDevice`, `SimBarometerDevice`, `SimBatteryDevice`, `SimDifferentialDriveDevice`, `MotorMixer`, `SimulationConfig`, configurable noise, drift, dropout, and environment models |
+| **HelixForge.Control** | Control library: `PidController`, `ComplementaryFilter`, `MadgwickFilter`, `ScalarKalmanFilter`, `TrapezoidalProfile`, `Quaternion` — allocation-free control logic for any backend |
 | **HelixForge.Telemetry** | Telemetry bus: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `ITelemetrySink` |
 | **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC — more drivers coming in future releases |
 
@@ -222,6 +227,7 @@ The delegate sink pattern makes it trivial to write telemetry to any backend.
 ```shell
 dotnet add package HelixForge
 dotnet add package HelixForge.Simulation
+dotnet add package HelixForge.Control
 dotnet add package HelixForge.Telemetry
 ```
 
@@ -311,7 +317,7 @@ Specialized actuator: throttle control.
 
 ```csharp
 var motor = registry.GetByType<IMotorDevice>();
-motor.SetThrottle(0.75);   // 0.0 to 1.0
+motor.SetThrottle(0.75);    // 0.0 to 1.0
 double t = motor.Throttle;  // current throttle
 ```
 
@@ -362,7 +368,7 @@ Specialized sensor: terminal voltage, current draw, and state of charge.
 ```csharp
 var battery = registry.GetByType<IBatteryDevice>();
 BatteryData data = battery.Read();
-double v = data.Voltage;         // volts (includes sag)
+double v = data.Voltage;          // volts (includes sag)
 double soc = data.ChargeFraction; // 0.0 .. 1.0
 ```
 
@@ -378,14 +384,75 @@ drive.SetTargetSpeeds(0.5, 0.5);   // left / right wheel speed (m/s)
 Pose2D pose = drive.Read().Pose;   // X, Y, Yaw
 ```
 
+### `PidController`
+Allocation-free PID with output clamps, clamped-integral anti-windup, and an optionally
+filtered derivative (on error or on measurement). Runs identically against simulated or
+real devices.
+
+```csharp
+using HelixForge.Control;
+
+var pid = new PidController(new PidConfig
+{
+    Kp = 2.0, Ki = 0.1, Kd = 0.5,
+    OutputMin = -0.5, OutputMax = 0.5,
+    IntegralLimit = 0.2,
+    DerivativeMode = DerivativeMode.OnMeasurement
+});
+
+// Inside the control loop:
+double correction = pid.Step(setpoint: 0.0, measurement: imu.Read().Orientation.X, dt: 0.01);
+```
+
+### Attitude Estimation
+Fuse raw accelerometer + gyroscope (and optionally magnetometer) into orientation when the
+hardware does not provide it directly. `ComplementaryFilter` is a cheap per-axis blend;
+`MadgwickFilter` is the quaternion-based industry standard.
+
+```csharp
+var attitude = new ComplementaryFilter(new ComplementaryFilterConfig { Alpha = 0.98 });
+attitude.Update(dt, reading.AngularVelocity, reading.Acceleration);
+Vector3 rollPitchYaw = attitude.Orientation;
+
+var est = new MadgwickFilter(new MadgwickFilterConfig { Beta = 0.1 });
+est.Update(dt, reading.AngularVelocity, reading.Acceleration, magData.MagneticField);
+```
+
+### `ScalarKalmanFilter`
+Deterministic constant-state Kalman filter for smoothing noisy scalar measurements.
+
+```csharp
+var filter = new ScalarKalmanFilter(new ScalarKalmanConfig
+{
+    ProcessNoise = 0.01,
+    MeasurementNoise = 1.0
+});
+double estimate = filter.Update(measurement: 11.2, dt: 0.1);
+```
+
+### `TrapezoidalProfile`
+Accel-cruise-decel trajectory profile that folds to a triangle for short moves.
+
+```csharp
+var profile = new TrapezoidalProfile(new TrapezoidalProfileConfig
+{
+    MaxVelocity = 1.0,
+    MaxAcceleration = 1.0,
+    MaxDeceleration = 1.0
+});
+profile.SetTarget(start: 0.0, target: 2.0);
+TrapezoidalProfileState s = profile.Evaluate(TimeSpan.FromSeconds(1.5));
+// s.Position, s.Velocity, s.Acceleration, s.IsComplete
+```
+
 ### `Vector3`
 Immutable 3D vector with arithmetic, dot product, cross product, lerp, and normalization.
 
 ```csharp
 var a = new Vector3(1.0, 2.0, 3.0);
 var b = new Vector3(4.0, 5.0, 6.0);
-double dot = Vector3.Dot(a, b);        // 32.0
-var cross = Vector3.Cross(a, b);       // (-3, 6, -3)
+double dot = Vector3.Dot(a, b);       // 32.0
+var cross = Vector3.Cross(a, b);      // (-3, 6, -3)
 var mid = Vector3.Lerp(a, b, 0.5);    // (2.5, 3.5, 4.5)
 ```
 
@@ -407,7 +474,7 @@ Deterministic time-step coordinator. Advances virtual time and calls `Update()` 
 var engine = new SimulationEngine(registry, telemetry, config);
 engine.Step();                                    // one step
 engine.Run(TimeSpan.FromSeconds(10));             // run for duration
-engine.Run(TimeSpan.FromSeconds(10), t => { });  // with callback
+engine.Run(TimeSpan.FromSeconds(10), t => { });   // with callback
 engine.Reset();                                   // return to initial state
 ```
 

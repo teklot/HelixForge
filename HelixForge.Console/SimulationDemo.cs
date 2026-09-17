@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using HelixForge;
+using HelixForge.Control;
 using HelixForge.Simulation;
 using HelixForge.Telemetry;
 
@@ -60,31 +61,45 @@ internal static class SimulationDemo
         registry.Register(motorRight);
         registry.Register(battery);
 
+        imu.Initialize();
+        motorLeft.Initialize();
+        motorRight.Initialize();
+        battery.Initialize();
+
         var engine = new SimulationEngine(registry, telemetry, simConfig);
 
         // PID controller constants
-        double kp = 2.0;
-        double ki = 0.1;
-        double kd = 0.5;
-        double integral = 0.0;
-        double previousError = 0.0;
         double targetAngle = 0.0;
+        var pid = new PidController(new PidConfig
+        {
+            Kp = 2.0,
+            Ki = 0.1,
+            Kd = 0.5,
+            OutputMin = -0.5,
+            OutputMax = 0.5,
+            IntegralLimit = 0.2,
+            DerivativeMode = DerivativeMode.OnMeasurement
+        });
 
         System.Console.WriteLine("Starting simulation...");
         System.Console.WriteLine($"Time step: {timeStep.TotalMilliseconds}ms");
         System.Console.WriteLine($"Target angle: {targetAngle} rad");
         System.Console.WriteLine();
 
+        // The simulation is device-scoped (no global physics engine), so the plant that
+        // connects motor torque back to vehicle attitude is expressed here as a simple
+        // first-order angular-rate response on the IMU.
+        double angularRate = 0.0;
+        double torqueGain = 5.0;    // rad/s^2 per unit of differential throttle
+        double damping = 0.5;       // rad/s per rad/s of angular rate
+
         engine.Run(duration, currentTime =>
         {
             var reading = imu.Read();
 
             // PID control on roll axis (X orientation)
+            double correction = pid.Step(targetAngle, reading.Orientation.X, timeStep.TotalSeconds);
             double error = targetAngle - reading.Orientation.X;
-            integral += error * timeStep.TotalSeconds;
-            double derivative = (error - previousError) / timeStep.TotalSeconds;
-            double correction = kp * error + ki * integral + kd * derivative;
-            previousError = error;
 
             // Distribute correction to motors
             double baseThrottle = 0.5;
@@ -93,6 +108,11 @@ internal static class SimulationDemo
 
             motorLeft.SetThrottle(leftThrottle);
             motorRight.SetThrottle(rightThrottle);
+
+            // Plant: apply angular acceleration from the differential torque, with damping,
+            // and feed the resulting rate back to the IMU so the loop is genuinely closed.
+            angularRate += (torqueGain * correction - damping * angularRate) * timeStep.TotalSeconds;
+            imu.SetAngularVelocity(new Vector3(angularRate, 0.0, 0.0));
 
             // Print status every 500ms
             if (currentTime.TotalMilliseconds % 500 < timeStep.TotalMilliseconds)

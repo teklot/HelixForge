@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using HelixForge.Control;
 using HelixForge.Hardware.Drivers;
 using HelixForge.Telemetry;
 
@@ -43,15 +44,30 @@ internal static class HardwareDemo
 
         int stepCount = 0;
 
+        // Real-hardware gap closure: the IMU exposes raw accel/gyro, not orientation.
+        // A complementary filter turns those into a usable Roll/Pitch/Yaw estimate.
+        var attitude = new ComplementaryFilter(new ComplementaryFilterConfig { Alpha = 0.98 });
+        var pid = new PidController(new PidConfig
+        {
+            Kp = 2.0,
+            Ki = 0.1,
+            Kd = 0.5,
+            OutputMin = -0.5,
+            OutputMax = 0.5,
+            IntegralLimit = 0.2,
+            DerivativeMode = DerivativeMode.OnMeasurement
+        });
+
         for (var currentTime = TimeSpan.Zero; currentTime < duration; currentTime += timeStep)
         {
             imu.Update(timeStep);
             var reading = imu.Read();
 
-            // Simple rate-damping control on roll axis
-            double dampingGain = 0.05;
+            // Fuse accel + gyro into a roll estimate, then regulate roll to level.
+            attitude.Update(timeStep, reading.AngularVelocity, reading.Acceleration);
+            double correction = pid.Step(setpoint: 0.0, measurement: attitude.Orientation.X, timeStep.TotalSeconds);
             double baseThrottle = 0.3;
-            double correction = dampingGain * reading.AngularVelocity.X;
+
             double leftThrottle = Math.Clamp(baseThrottle + correction, 0.0, 1.0);
             double rightThrottle = Math.Clamp(baseThrottle - correction, 0.0, 1.0);
 
@@ -62,6 +78,7 @@ internal static class HardwareDemo
             {
                 System.Console.WriteLine(
                     $"[{currentTime.TotalSeconds,6:F2}s] " +
+                    $"Roll={attitude.Orientation.X,6:F2} rad | " +
                     $"Accel=({reading.Acceleration.X,6:F2},{reading.Acceleration.Y,6:F2},{reading.Acceleration.Z,6:F2}) m/s² | " +
                     $"Gyro=({reading.AngularVelocity.X,6:F2},{reading.AngularVelocity.Y,6:F2},{reading.AngularVelocity.Z,6:F2}) rad/s | " +
                     $"L={leftThrottle,4:F2} R={rightThrottle,4:F2}");
