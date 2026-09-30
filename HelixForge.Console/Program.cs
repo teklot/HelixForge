@@ -6,7 +6,7 @@ namespace HelixForge.Console;
 /// <summary>
 /// HelixForge console demos entry point.
 /// Default runs the Golden Path UAV stabilization simulation; use --mode real for hardware.
-/// Run a specific device sample with --sample &lt;mag|baro|servo|gps|control&gt;.
+/// Run a specific device sample with --sample &lt;mag|baro|servo|gps|control|instruments&gt;.
 /// With no arguments, an interactive options menu is shown.
 /// </summary>
 class Program
@@ -78,6 +78,7 @@ class Program
             System.Console.WriteLine("  5. Servo sample");
             System.Console.WriteLine("  6. GPS sample");
             System.Console.WriteLine("  7. Control library sample");
+            System.Console.WriteLine("  8. Instruments / SCPI wire-seam sample");
             System.Console.WriteLine("  0. Exit");
             System.Console.WriteLine();
             System.Console.Write("Choose an option: ");
@@ -94,7 +95,7 @@ class Program
             if (choice == 0)
                 return;
 
-            if (choice is >= 1 and <= 7)
+            if (choice is >= 1 and <= 8)
             {
                 double seconds = PromptDuration();
                 var duration = TimeSpan.FromSeconds(seconds);
@@ -160,6 +161,9 @@ class Program
             case 7:
                 ControlSample.Run(timeStep, duration);
                 break;
+            case 8:
+                InstrumentsSample.Run(timeStep, duration);
+                break;
         }
     }
 
@@ -189,8 +193,11 @@ class Program
             case "control":
                 ControlSample.Run(timeStep, duration);
                 break;
+            case "instruments":
+                InstrumentsSample.Run(timeStep, duration);
+                break;
             default:
-                System.Console.WriteLine($"Unknown sample '{name}'. Choose from: mag, baro, servo, gps, control.");
+                System.Console.WriteLine($"Unknown sample '{name}'. Choose from: mag, baro, servo, gps, control, instruments.");
                 break;
         }
     }

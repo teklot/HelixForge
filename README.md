@@ -47,6 +47,13 @@ HelixForge is a shared abstraction layer for hardware on .NET — **the vocabula
   - [`DeviceRegistry`](#deviceregistry)
   - [`SimulationEngine`](#simulationengine)
   - [`TelemetryBus`](#telemetrybus)
+- [Instruments (SCPI Wire Seam)](#instruments-scpi-wire-seam)
+  - [`SimScpiInstrument`](#simscpiinstrument)
+  - [`IOscilloscopeDevice`](#ioscilloscopedevice)
+  - [`IDaqDevice`](#idaqdevice)
+  - [`IPlcDevice`](#iplcdevice)
+  - [`IBenchPowerSupply`](#ibenchpowersupply)
+  - [`IBatteryCycler`](#ibatterycycler)
 - [Supported Frameworks](#supported-frameworks)
 
 ## The Problem
@@ -221,6 +228,7 @@ The delegate sink pattern makes it trivial to write telemetry to any backend.
 | **HelixForge.Control** | Control library: `PidController`, `ComplementaryFilter`, `MadgwickFilter`, `ScalarKalmanFilter`, `TrapezoidalProfile`, `Quaternion` — allocation-free control logic for any backend |
 | **HelixForge.Telemetry** | Telemetry bus: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `ITelemetrySink` |
 | **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC — more drivers coming in future releases |
+| **HelixForge.Instruments** | Instrument & industrial device models: `SimOscilloscopeDevice`, `SimDaqDevice`, `SimPlcDevice`, `SimBenchPsuDevice`, `SimBatteryCyclerDevice` — deterministic sims with a standalone SCPI wire seam (`SimScpiInstrument`, IEEE-488.2 block framing) |
 
 ## Installation
 
@@ -229,6 +237,7 @@ dotnet add package HelixForge
 dotnet add package HelixForge.Simulation
 dotnet add package HelixForge.Control
 dotnet add package HelixForge.Telemetry
+dotnet add package HelixForge.Instruments
 ```
 
 ## Quick Start
@@ -489,6 +498,70 @@ bus.Publish("imu-01", "orientation.x", 1.5, TimeSpan.FromSeconds(1));
 bus.RemoveSink(sink);
 bus.Dispose();
 ```
+
+## Instruments (SCPI Wire Seam)
+
+The `HelixForge.Instruments` package models lab and industrial instrumentation with
+**deterministic simulation backends** and a **standalone byte-stream seam**. Every instrument
+ships as a wire-facing contract plus a seeded sim model that emits telemetry metrics.
+
+Interop is deliberately **wire-level only**: HelixForge.Instruments holds zero references to
+SignalFlux or any transport library. A controller talks to these sims the same way it would
+talk to physical gear — by writing SCPI command bytes and reading framed responses.
+
+```csharp
+using HelixForge.Instruments;
+
+var scope = new SimOscilloscopeDevice("scope-01", new OscilloscopeSimConfig
+{
+    ChannelCount = 4,
+    Amplitude = 3.3,
+    FrequencyHz = 1000.0,
+    WaveformShape = OscilloscopeWaveformShape.Sine,
+    NoiseAmplitude = 0.02,
+    RandomSeed = 42
+});
+scope.Initialize();
+
+var connection = new InMemoryInstrumentConnection();
+var responder = new SimScpiInstrument(connection, scope);
+
+connection.Write(System.Text.Encoding.ASCII.GetBytes("*IDN?\r\n"));
+responder.ProcessAvailable();
+byte[] reply = connection.ReadAvailable(); // "HelixForge,SimScpiInstrument,1.0\r\n"
+```
+
+### `SimScpiInstrument`
+Wire-facing SCPI responder. Reads CRLF-terminated query bytes off an
+`IInstrumentStreamConnection`, dispatches to the backend device, and writes
+IEEE-488.2 definite-length (`#<n>`...) or indefinite (`#0`) framed responses.
+By construction it references no SignalFlux types — the wire protocol is the seam.
+
+### `IOscilloscopeDevice`
+Full-capture waveform instrument: configurable channel count, sample rate, amplitude,
+frequency, and waveform shape (sine / square / triangle / sawtooth) with seeded additive
+noise. `ReadCapture()` returns `OscilloscopeData` of per-channel samples. Served over SCPI
+via `:WAV:DATA?` block queries.
+
+### `IDaqDevice`
+Multichannel analog input device. `SimDaqDevice` streams seeded, clock-driven samples per
+channel (voltage, signal, optional noise) and publishes `daq.c<N>.voltage` metrics.
+
+### `IPlcDevice`
+Discrete digital I/O controller with a cyclic scan model. `SimPlcDevice` evaluates a
+deterministic AND/OR rung program each `ScanOnce()` and publishes output states.
+
+### `IBenchPowerSupply`
+Bench power supply with output enable, clamped V-setpoints, slew-limited ramping, and
+load-derived current readback. Publishes `psu.voltage` / `psu.current` metrics.
+
+### `IBatteryCycler`
+Battery cycle-charging instrument. `SimBatteryCyclerDevice` integrates applied current into
+state-of-charge and reports open-circuit-voltage-based cell voltage, publishing
+`cycler.soc` / `cycler.voltage` / `cycler.current` metrics.
+
+Each sim is deterministic: identical config + identical call sequence → identical data and
+identical telemetry. See `HelixForge.Tests/Instruments` for unit and determinism tests.
 
 ## Supported Frameworks
 

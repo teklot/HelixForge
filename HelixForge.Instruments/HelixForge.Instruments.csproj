@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <RootNamespace>HelixForge.Instruments</RootNamespace>
+    <Description>HelixForge instrument &amp; industrial device models: oscilloscope, DAQ, PLC, bench power supply, and battery cycler contracts with deterministic simulation backends. Standalone library with its own byte stream seam.</Description>
+    <PackageId>HelixForge.Instruments</PackageId>
+    <PackageTags>HelixForge;Instruments;Oscilloscope;DAQ;PLC;SCPI;Simulation</PackageTags>
+    <PackageReleaseNotes>Adds instrument &amp; industrial device contracts with deterministic sim models, telemetry metrics, and a standalone SCPI wire seam (IEEE-488.2 block framing).</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HelixForge\HelixForge.csproj" />
+    <ProjectReference Include="..\HelixForge.Simulation\HelixForge.Simulation.csproj" />
+    <ProjectReference Include="..\HelixForge.Telemetry\HelixForge.Telemetry.csproj" />
+    <ProjectReference Include="..\HelixForge.Control\HelixForge.Control.csproj" />
+  </ItemGroup>
+
+</Project>
