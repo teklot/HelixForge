@@ -63,18 +63,73 @@ public class Bmi160ImuDeviceTests
     }
 
     [Fact]
-    public void Read_ParsesAccelerometerFromBurstWindow()
+    public void Read_Acceleration_ParsesFromAccelRegisters()
     {
         var fake = CreateFake();
         using var device = new Bmi160ImuDevice("imu-01", 1, 0x68, _ => fake);
         device.Initialize();
 
-        fake.SetRegister(0x04, 0x00);
-        fake.SetRegister(0x05, 0x40);
+        fake.SetRegister(0x12, 0x00);
+        fake.SetRegister(0x13, 0x40);
+        fake.SetRegister(0x14, 0x00);
+        fake.SetRegister(0x15, 0xC0);
+        fake.SetRegister(0x16, 0x00);
+        fake.SetRegister(0x17, 0x80);
 
         ImuData reading = device.Read();
 
         Assert.Equal(1.0, reading.Acceleration.X, 3);
+        Assert.Equal(-1.0, reading.Acceleration.Y, 3);
+        Assert.Equal(-2.0, reading.Acceleration.Z, 3);
+    }
+
+    [Fact]
+    public void Read_Acceleration_IgnoresMagnetometerRegisters()
+    {
+        var fake = CreateFake();
+        using var device = new Bmi160ImuDevice("imu-01", 1, 0x68, _ => fake);
+        device.Initialize();
+
+        for (int register = 0x04; register <= 0x09; register++)
+            fake.SetRegister(register, 0x7F);
+
+        ImuData reading = device.Read();
+
+        Assert.Equal(0.0, reading.Acceleration.X, 3);
+        Assert.Equal(0.0, reading.Acceleration.Y, 3);
+        Assert.Equal(0.0, reading.Acceleration.Z, 3);
+    }
+
+    [Fact]
+    public void Initialize_WritesExpectedConfiguration()
+    {
+        var fake = CreateFake();
+        using var device = new Bmi160ImuDevice("imu-01", 1, 0x68, _ => fake);
+
+        device.Initialize();
+
+        Assert.Equal(0x28, fake.GetRegister(0x40));
+        Assert.Equal(0x28, fake.GetRegister(0x42));
+        Assert.Equal(0x15, fake.GetRegister(0x7E));
+    }
+
+    [Fact]
+    public void Read_BeforeInitialize_Throws()
+    {
+        var fake = CreateFake();
+        using var device = new Bmi160ImuDevice("imu-01", 1, 0x68, _ => fake);
+
+        Assert.Throws<InvalidOperationException>(() => device.Read());
+    }
+
+    [Fact]
+    public void Initialize_Twice_Throws()
+    {
+        var fake = CreateFake();
+        using var device = new Bmi160ImuDevice("imu-01", 1, 0x68, _ => fake);
+        device.Initialize();
+
+        Assert.Throws<InvalidOperationException>(() => device.Initialize());
     }
 
     [Fact]

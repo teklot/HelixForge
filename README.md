@@ -47,6 +47,8 @@ HelixForge is a shared abstraction layer for hardware on .NET — **the vocabula
   - [`DeviceRegistry`](#deviceregistry)
   - [`SimulationEngine`](#simulationengine)
   - [`TelemetryBus`](#telemetrybus)
+  - [`CsvSink`](#csvsink)
+  - [`BufferedSink`](#bufferedsink)
 - [Instruments (SCPI Wire Seam)](#instruments-scpi-wire-seam)
   - [`SimScpiInstrument`](#simscpiinstrument)
   - [`IOscilloscopeDevice`](#ioscilloscopedevice)
@@ -204,10 +206,26 @@ Deterministic simulation enables bit-exact regression tests for safety-critical 
 ### Telemetry Archival
 
 ```
-SimulationEngine → TelemetryBus → Custom Sink → CSV / SQLite / Network
+SimulationEngine → TelemetryBus → BufferedSink → CsvSink → CSV file
 ```
 
-The delegate sink pattern makes it trivial to write telemetry to any backend.
+`CsvSink` persists telemetry as tidy long rows (`timestamp_ms,device_id,metric,value`), expanding vector metrics into `.x`/`.y`/`.z` rows. Wrap it in a `BufferedSink` to keep file I/O off the control loop: the bounded queue drops events (oldest or newest, your choice) instead of blocking behavior, and reports what it dropped.
+
+```csharp
+var csv = new CsvSink("telemetry.csv");
+using var buffered = new BufferedSink(csv, capacity: 8192, TelemetryDropPolicy.DropOldest);
+
+var bus = new TelemetryBus();
+bus.AddSink(buffered);
+
+var engine = new SimulationEngine(registry, bus, config);
+engine.Run(TimeSpan.FromSeconds(10));
+
+buffered.Flush();
+Console.WriteLine($"{csv.RowsWritten} rows, {buffered.DroppedCount} dropped");
+```
+
+The delegate sink pattern remains available for any other backend (SQLite, network, in-memory).
 
 ## Technical Differentiators
 
@@ -226,7 +244,7 @@ The delegate sink pattern makes it trivial to write telemetry to any backend.
 | **HelixForge** | Core abstractions: `IDevice`, `ISensor`, `IActuator`, `IImuDevice`, `IGpsDevice`, `IMagnetometerDevice`, `IBarometerDevice`, `IMotorDevice`, `IServoDevice`, `IBatteryDevice`, `IDifferentialDriveDevice`, `Vector3`, `ImuData`, `GpsData`, `MagData`, `BarometerData`, `BatteryData`, `Pose2D`, `GpsFixStatus`, `DeviceRegistry`, `ITelemetryPublisher` |
 | **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimServoDevice`, `SimGpsDevice`, `SimMagDevice`, `SimBarometerDevice`, `SimBatteryDevice`, `SimDifferentialDriveDevice`, `MotorMixer`, `SimulationConfig`, configurable noise, drift, dropout, and environment models |
 | **HelixForge.Control** | Control library: `PidController`, `ComplementaryFilter`, `MadgwickFilter`, `ScalarKalmanFilter`, `TrapezoidalProfile`, `Quaternion` — allocation-free control logic for any backend |
-| **HelixForge.Telemetry** | Telemetry bus: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `ITelemetrySink` |
+| **HelixForge.Telemetry** | Telemetry bus and sinks: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `CsvSink`, `BufferedSink`, `TelemetryDropPolicy`, `ITelemetrySink` |
 | **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC — more drivers coming in future releases |
 | **HelixForge.Instruments** | Instrument & industrial device models: `SimOscilloscopeDevice`, `SimDaqDevice`, `SimPlcDevice`, `SimBenchPsuDevice`, `SimBatteryCyclerDevice` — deterministic sims with a standalone SCPI wire seam (`SimScpiInstrument`, IEEE-488.2 block framing) |
 
@@ -497,6 +515,34 @@ bus.AddSink(new DelegateSink(e => processEvent(e)));
 bus.Publish("imu-01", "orientation.x", 1.5, TimeSpan.FromSeconds(1));
 bus.RemoveSink(sink);
 bus.Dispose();
+```
+
+### `CsvSink`
+Persists events as tidy-long CSV: `timestamp_ms,device_id,metric,value`. Vector metrics expand into `.x`, `.y`, and `.z` rows; values use invariant culture and `\n` line endings, and fields are RFC 4180 escaped.
+
+```csharp
+var csv = new CsvSink("telemetry.csv");   // creates/truncates the file and writes the header
+csv.OnEvent(new TelemetryEvent("imu-01", "throttle", 0.5, TimeSpan.FromMilliseconds(10)));
+// -> 10,imu-01,throttle,0.5
+
+csv.RowsWritten;   // data rows written (a vector event counts as three)
+csv.Flush();       // push buffered rows to disk
+csv.Dispose();
+```
+
+### `BufferedSink`
+Bounded queue that forwards events to an inner sink on a background thread, so slow archival never blocks the producer. When the queue is full it applies a `TelemetryDropPolicy` instead of growing without bound.
+
+```csharp
+var sink = new BufferedSink(new CsvSink("telemetry.csv"), capacity: 8192,
+    TelemetryDropPolicy.DropOldest);
+bus.AddSink(sink);
+
+sink.PendingCount;   // events queued but not yet handed to the inner sink
+sink.DroppedCount;   // events discarded because the queue was full
+sink.FailedCount;    // events the inner sink rejected
+sink.Flush();        // wait until everything published so far reached the inner sink
+sink.Dispose();      // drain, stop the worker, dispose the inner sink
 ```
 
 ## Instruments (SCPI Wire Seam)

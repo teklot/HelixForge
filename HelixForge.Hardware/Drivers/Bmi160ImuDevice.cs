@@ -12,8 +12,8 @@ public sealed class Bmi160ImuDevice : IImuDevice
 {
     private const int ChipIdRegister = 0x00;
     private const int ExpectedChipId = 0xD1;
-    private const int AccelDataRegister = 0x04;
-    private const int GyroDataRegister = 0x0C;
+    private const int DataRegister = 0x0C;
+    private const int DataLength = 12;
     private const int AccelConfigRegister = 0x40;
     private const int GyroConfigRegister = 0x42;
     private const int CommandRegister = 0x7E;
@@ -85,15 +85,15 @@ public sealed class Bmi160ImuDevice : IImuDevice
         if (!IsInitialized)
             throw new InvalidOperationException($"Device '{DeviceId}' is not initialized.");
 
-        Span<byte> buffer = stackalloc byte[14];
-        ReadRegisters(AccelDataRegister, buffer);
+        Span<byte> buffer = stackalloc byte[DataLength];
+        ReadRegisters(DataRegister, buffer);
 
-        short accelX = (short)(buffer[0] | (buffer[1] << 8));
-        short accelY = (short)(buffer[2] | (buffer[3] << 8));
-        short accelZ = (short)(buffer[4] | (buffer[5] << 8));
-        short gyroX = (short)(buffer[8] | (buffer[9] << 8));
-        short gyroY = (short)(buffer[10] | (buffer[11] << 8));
-        short gyroZ = (short)(buffer[12] | (buffer[13] << 8));
+        short gyroX = ReadInt16(buffer, 0);
+        short gyroY = ReadInt16(buffer, 2);
+        short gyroZ = ReadInt16(buffer, 4);
+        short accelX = ReadInt16(buffer, 6);
+        short accelY = ReadInt16(buffer, 8);
+        short accelZ = ReadInt16(buffer, 10);
 
         var acceleration = new Vector3(accelX * AccelScale, accelY * AccelScale, accelZ * AccelScale);
         var angularVelocity = new Vector3(gyroX * GyroScale, gyroY * GyroScale, gyroZ * GyroScale);
@@ -142,5 +142,10 @@ public sealed class Bmi160ImuDevice : IImuDevice
     {
         Span<byte> buffer = stackalloc byte[] { register, value };
         _device!.Write(buffer);
+    }
+
+    private static short ReadInt16(Span<byte> buffer, int offset)
+    {
+        return (short)(buffer[offset] | (buffer[offset + 1] << 8));
     }
 }

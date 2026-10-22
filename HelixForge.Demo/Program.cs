@@ -6,7 +6,7 @@ namespace HelixForge.Demo;
 /// <summary>
 /// HelixForge demo entry point.
 /// Default runs the Golden Path UAV stabilization simulation; use --mode real for hardware.
-/// Run a specific device sample with --sample &lt;mag|baro|servo|gps|control|instruments&gt;.
+/// Run a specific device sample with --sample &lt;mag|baro|servo|gps|control|instruments|telemetry&gt;.
 /// With no arguments, an interactive options menu is shown.
 /// </summary>
 class Program
@@ -47,7 +47,7 @@ class Program
         System.Console.WriteLine("=== HelixForge UAV Stabilization Demo ===");
         System.Console.WriteLine($"Mode: {(options.UseRealHardware ? "REAL HARDWARE" : "Simulation")}");
         System.Console.WriteLine();
-        System.Console.WriteLine("Run `--sample <mag|baro|servo|gps|control>` for per-device demos, or `--help` for options.");
+        System.Console.WriteLine("Run `--sample <mag|baro|servo|gps|control|instruments|telemetry>` for per-device demos, or `--help` for options.");
         System.Console.WriteLine();
 
         if (options.UseRealHardware)
@@ -79,6 +79,7 @@ class Program
             System.Console.WriteLine("  6. GPS sample");
             System.Console.WriteLine("  7. Control library sample");
             System.Console.WriteLine("  8. Instruments / SCPI wire-seam sample");
+            System.Console.WriteLine("  9. Telemetry persistence sample");
             System.Console.WriteLine("  0. Exit");
             System.Console.WriteLine();
             System.Console.Write("Choose an option: ");
@@ -95,7 +96,7 @@ class Program
             if (choice == 0)
                 return;
 
-            if (choice is >= 1 and <= 8)
+            if (choice is >= 1 and <= 9)
             {
                 double seconds = PromptDuration();
                 var duration = TimeSpan.FromSeconds(seconds);
@@ -164,6 +165,9 @@ class Program
             case 8:
                 InstrumentsSample.Run(timeStep, duration);
                 break;
+            case 9:
+                TelemetrySample.Run(timeStep, duration);
+                break;
         }
     }
 
@@ -196,8 +200,11 @@ class Program
             case "instruments":
                 InstrumentsSample.Run(timeStep, duration);
                 break;
+            case "telemetry":
+                TelemetrySample.Run(timeStep, duration);
+                break;
             default:
-                System.Console.WriteLine($"Unknown sample '{name}'. Choose from: mag, baro, servo, gps, control, instruments.");
+                System.Console.WriteLine($"Unknown sample '{name}'. Choose from: mag, baro, servo, gps, control, instruments, telemetry.");
                 break;
         }
     }

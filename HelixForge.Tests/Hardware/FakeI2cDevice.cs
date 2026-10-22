@@ -17,6 +17,8 @@ public sealed class FakeI2cDevice : I2cDevice
 
     public void SetRegister(int address, byte value) => _registers[address] = value;
 
+    public byte GetRegister(int address) => _registers[address];
+
     public override void Read(Span<byte> buffer)
     {
         for (int i = 0; i < buffer.Length; i++)
