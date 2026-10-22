@@ -5,7 +5,7 @@ using HelixForge.Control;
 using HelixForge.Simulation;
 using HelixForge.Telemetry;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// Golden-path UAV stabilization demo running entirely in simulation.

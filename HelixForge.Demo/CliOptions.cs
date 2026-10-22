@@ -1,9 +1,9 @@
 using System;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
-/// Parsed command-line options for the HelixForge console demos.
+/// Parsed command-line options for the HelixForge demos.
 /// </summary>
 internal sealed class CliOptions
 {
@@ -62,10 +62,10 @@ internal sealed class CliOptions
     /// <summary>Prints usage help to the console.</summary>
     public static void PrintHelp()
     {
-        System.Console.WriteLine("HelixForge console demos");
+        System.Console.WriteLine("HelixForge demos");
         System.Console.WriteLine();
         System.Console.WriteLine("Usage:");
-        System.Console.WriteLine("  HelixForge.Console [options]");
+        System.Console.WriteLine("  HelixForge.Demo [options]");
         System.Console.WriteLine();
         System.Console.WriteLine("Options:");
         System.Console.WriteLine("  (no arguments)                 Show the interactive options menu.");

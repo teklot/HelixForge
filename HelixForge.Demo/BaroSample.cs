@@ -1,7 +1,7 @@
 using System;
 using HelixForge.Simulation;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// Barometer device sample: climbs from 0m to 100m and prints pressure/altitude.

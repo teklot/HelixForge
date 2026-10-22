@@ -4,7 +4,7 @@ using HelixForge.Control;
 using HelixForge.Hardware.Drivers;
 using HelixForge.Telemetry;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// Golden-path UAV stabilization demo running against physical hardware.

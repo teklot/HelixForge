@@ -3,7 +3,7 @@ using HelixForge;
 using HelixForge.Control;
 using HelixForge.Simulation;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// Control library sample: attitude estimation (complementary + Madgwick) fused from a

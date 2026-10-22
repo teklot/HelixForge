@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using HelixForge.Instruments;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// Instrument sample: exercises every instrument sim — the SCPI wire seam

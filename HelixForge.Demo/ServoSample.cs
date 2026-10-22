@@ -1,7 +1,7 @@
 using System;
 using HelixForge.Simulation;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// Servo device sample: commands 0 -> 180 -> 0 and shows slew limiting + clamping.

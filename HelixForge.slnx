@@ -12,5 +12,5 @@
   <Project Path="HelixForge.Instruments/HelixForge.Instruments.csproj" />
   <Project Path="HelixForge.Tests/HelixForge.Tests.csproj" />
   <Project Path="HelixForge.Benchmark/HelixForge.Benchmark.csproj" />
-  <Project Path="HelixForge.Console/HelixForge.Console.csproj" />
+  <Project Path="HelixForge.Demo/HelixForge.Demo.csproj" />
 </Solution>

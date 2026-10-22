@@ -1,10 +1,10 @@
 using System;
 using HelixForge.Telemetry;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
-/// HelixForge console demos entry point.
+/// HelixForge demo entry point.
 /// Default runs the Golden Path UAV stabilization simulation; use --mode real for hardware.
 /// Run a specific device sample with --sample &lt;mag|baro|servo|gps|control|instruments&gt;.
 /// With no arguments, an interactive options menu is shown.
@@ -69,7 +69,7 @@ class Program
         while (true)
         {
             TryClearScreen();
-            System.Console.WriteLine("=== HelixForge Console Menu ===");
+            System.Console.WriteLine("=== HelixForge Demo Menu ===");
             System.Console.WriteLine();
             System.Console.WriteLine("  1. UAV stabilization demo (simulation)");
             System.Console.WriteLine("  2. UAV stabilization demo (hardware)");

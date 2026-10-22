@@ -2,7 +2,7 @@ using System;
 using HelixForge;
 using HelixForge.Simulation;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// GPS device sample: high dropout rate shows cyclic Fix3D/NoFix transitions.

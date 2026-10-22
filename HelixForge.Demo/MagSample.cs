@@ -2,7 +2,7 @@ using System;
 using HelixForge;
 using HelixForge.Simulation;
 
-namespace HelixForge.Console;
+namespace HelixForge.Demo;
 
 /// <summary>
 /// Magnetometer device sample: sweeps sensor yaw and prints the field projection.
