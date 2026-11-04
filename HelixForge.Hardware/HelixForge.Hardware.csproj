@@ -12,10 +12,11 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;Hardware;Robotics;UAV;IMU;GPS;PWM;I2C;SPI;dotnet-library</PackageTags>
     <PackageReleaseNotes>
-	  - BMI160 IMU over I2C with monotonic timestamps
-      - Accelerometer data now read from registers 0x12-0x17 instead of the magnetometer window
-      - NMEA 0183 GPS over UART
-      - PWM motor ESC control
+	  - Transport seams (II2cBus, ISpiBus, ISerialTransport, IPwmChannel, IDShotTransport) with System.Device adapters for hardware-free unit tests
+      - BMI160 IMU over SPI (SPI-mode activation and read-bit protocol)
+      - UBX NAV-PVT GPS parsing with Fletcher-8 validation and NED-to-local velocity mapping
+      - DShot frame/CRC codec and DShotMotorDevice over an IDShotTransport seam
+      - BMI160, NMEA, and PWM drivers refactored onto transports with full test coverage
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>

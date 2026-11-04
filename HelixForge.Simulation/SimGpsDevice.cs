@@ -119,7 +119,10 @@ public sealed class SimGpsDevice : IGpsDevice
     /// <summary>
     /// Sets the velocity of the simulated GPS (for external control).
     /// </summary>
-    /// <param name="velocity">Velocity in meters per second (North, East, Down).</param>
+    /// <param name="velocity">
+    /// Velocity in meters per second (North, East, Up): X advances latitude, Y advances
+    /// longitude, and Z advances altitude. This matches <see cref="GpsData.Velocity"/>.
+    /// </param>
     public void SetVelocity(Vector3 velocity) => _velocity = velocity;
 
     /// <inheritdoc/>

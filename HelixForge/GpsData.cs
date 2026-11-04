@@ -16,7 +16,7 @@ public readonly struct GpsData : IEquatable<GpsData>
     /// <summary>Altitude above mean sea level in meters.</summary>
     public double Altitude { get; }
 
-    /// <summary>3D velocity vector in meters per second.</summary>
+    /// <summary>3D velocity vector in meters per second, with components (north, east, up).</summary>
     public Vector3 Velocity { get; }
 
     /// <summary>Time of this reading.</summary>

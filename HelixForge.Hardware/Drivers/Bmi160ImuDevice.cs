@@ -1,6 +1,6 @@
 using System;
-using System.Device.I2c;
 using System.Diagnostics;
+using HelixForge.Hardware.Transports;
 
 namespace HelixForge.Hardware.Drivers;
 
@@ -24,10 +24,11 @@ public sealed class Bmi160ImuDevice : IImuDevice
     private const double GyroScale = 2000.0 / 32768.0;
 
     private readonly int _busId;
+    private readonly bool _ownsBus;
     private readonly int _deviceAddress;
-    private readonly Func<I2cConnectionSettings, I2cDevice>? _deviceFactory;
     private readonly Stopwatch _stopwatch = new Stopwatch();
-    private I2cDevice? _device;
+    private II2cBus? _bus;
+    private II2cDevice? _device;
     private ImuData _latestReading;
 
     /// <inheritdoc />
@@ -39,20 +40,28 @@ public sealed class Bmi160ImuDevice : IImuDevice
     /// <inheritdoc />
     public ImuData LatestReading => _latestReading;
 
-    /// <summary>Creates a new BMI160 IMU device.</summary>
+    /// <summary>Creates a new BMI160 IMU device on a physical I2C bus.</summary>
     /// <param name="deviceId">Unique device identifier.</param>
     /// <param name="busId">I2C bus ID (typically 1 on Raspberry Pi).</param>
     /// <param name="deviceAddress">I2C address (0x68 or 0x69 depending on SDO pin).</param>
-    /// <param name="deviceFactory">
-    /// Optional factory used to create the I2C device. Defaults to <see cref="I2cDevice.Create"/>.
-    /// Intended for custom transports and testing.
-    /// </param>
-    public Bmi160ImuDevice(string deviceId, int busId, int deviceAddress, Func<I2cConnectionSettings, I2cDevice>? deviceFactory = null)
+    public Bmi160ImuDevice(string deviceId, int busId, int deviceAddress)
     {
         DeviceId = deviceId;
         _busId = busId;
         _deviceAddress = deviceAddress;
-        _deviceFactory = deviceFactory;
+        _ownsBus = true;
+        _latestReading = ImuData.Empty;
+    }
+
+    /// <summary>Creates a new BMI160 IMU device on a supplied I2C bus.</summary>
+    /// <param name="deviceId">Unique device identifier.</param>
+    /// <param name="deviceAddress">I2C address (0x68 or 0x69 depending on SDO pin).</param>
+    /// <param name="bus">I2C bus to open the device on. The caller keeps ownership of the bus.</param>
+    public Bmi160ImuDevice(string deviceId, int deviceAddress, II2cBus bus)
+    {
+        DeviceId = deviceId;
+        _deviceAddress = deviceAddress;
+        _bus = bus;
         _latestReading = ImuData.Empty;
     }
 
@@ -62,8 +71,8 @@ public sealed class Bmi160ImuDevice : IImuDevice
         if (IsInitialized)
             throw new InvalidOperationException($"Device '{DeviceId}' is already initialized.");
 
-        var settings = new I2cConnectionSettings(_busId, _deviceAddress);
-        _device = _deviceFactory != null ? _deviceFactory(settings) : I2cDevice.Create(settings);
+        II2cBus bus = _bus ?? (_bus = new I2cBusAdapter(_busId));
+        _device = bus.OpenDevice(_deviceAddress);
 
         byte chipId = ReadRegister(ChipIdRegister);
         if (chipId != ExpectedChipId)
@@ -121,6 +130,13 @@ public sealed class Bmi160ImuDevice : IImuDevice
         _stopwatch.Reset();
         _device?.Dispose();
         _device = null;
+
+        if (_ownsBus)
+        {
+            _bus?.Dispose();
+            _bus = null;
+        }
+
         IsInitialized = false;
     }
 

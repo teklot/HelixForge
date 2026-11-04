@@ -1,27 +1,31 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO.Ports;
+using System.Text;
 using System.Text.RegularExpressions;
+using HelixForge.Hardware.Transports;
 
 namespace HelixForge.Hardware.Drivers;
 
 /// <summary>
-/// Real GPS device driver that parses NMEA 0183 sentences over a serial port.
-/// Supports $GPGGA and $GPRMC sentences for position, altitude, and velocity.
+/// Real GPS device driver that parses NMEA 0183 sentences over a serial transport.
+/// Supports $--GGA and $--RMC sentences for position, altitude, and velocity.
 /// </summary>
 public sealed partial class NmeaGpsDevice : IGpsDevice
 {
-    [GeneratedRegex(@"^\$GPGGA,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,", RegexOptions.Compiled)]
+    private const int MaxPendingLength = 4096;
+
+    [GeneratedRegex(@"^\$[A-Z]{2}GGA,", RegexOptions.Compiled)]
     private static partial Regex GgaPrefixRegex();
 
-    [GeneratedRegex(@"^\$GPRMC,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*", RegexOptions.Compiled)]
+    [GeneratedRegex(@"^\$[A-Z]{2}RMC,", RegexOptions.Compiled)]
     private static partial Regex RmcPrefixRegex();
 
-    private readonly string _portName;
+    private readonly string _portName = string.Empty;
     private readonly int _baudRate;
     private readonly Stopwatch _stopwatch = new Stopwatch();
-    private SerialPort? _serialPort;
+    private ISerialTransport? _transport;
+    private string _pending = string.Empty;
     private GpsData _latestReading;
 
     /// <inheritdoc />
@@ -33,7 +37,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
     /// <inheritdoc />
     public GpsData LatestReading => _latestReading;
 
-    /// <summary>Creates a new NMEA GPS device.</summary>
+    /// <summary>Creates a new NMEA GPS device on a physical serial port.</summary>
     /// <param name="deviceId">Unique device identifier.</param>
     /// <param name="portName">Serial port name (e.g., "COM3" or "/dev/ttyAMA0").</param>
     /// <param name="baudRate">Baud rate (typically 9600 or 115200).</param>
@@ -45,19 +49,27 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
         _latestReading = GpsData.Empty;
     }
 
+    /// <summary>Creates a new NMEA GPS device on a supplied serial transport.</summary>
+    /// <param name="deviceId">Unique device identifier.</param>
+    /// <param name="transport">Serial transport. The driver takes ownership of it.</param>
+    public NmeaGpsDevice(string deviceId, ISerialTransport transport)
+    {
+        DeviceId = deviceId;
+        _transport = transport;
+        _latestReading = GpsData.Empty;
+    }
+
     /// <inheritdoc />
     public void Initialize()
     {
         if (IsInitialized)
             throw new InvalidOperationException($"Device '{DeviceId}' is already initialized.");
 
-        _serialPort = new SerialPort(_portName, _baudRate, Parity.None, 8, StopBits.One)
-        {
-            ReadTimeout = 100,
-            NewLine = "\n"
-        };
-        _serialPort.Open();
+        ISerialTransport transport = _transport ?? (_transport = new SerialPortTransport(_portName, _baudRate));
+        if (!transport.IsOpen)
+            transport.Open();
 
+        _pending = string.Empty;
         _stopwatch.Restart();
         IsInitialized = true;
     }
@@ -68,24 +80,8 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
         if (!IsInitialized)
             throw new InvalidOperationException($"Device '{DeviceId}' is not initialized.");
 
-        while (_serialPort!.BytesToRead > 0)
-        {
-            try
-            {
-                string? line = _serialPort.ReadLine()?.Trim();
-                if (string.IsNullOrEmpty(line))
-                    continue;
-
-                if (GgaPrefixRegex().IsMatch(line))
-                    TryParseGga(line);
-                else if (RmcPrefixRegex().IsMatch(line))
-                    TryParseRmc(line);
-            }
-            catch (TimeoutException)
-            {
-                break;
-            }
-        }
+        if (_transport != null && _transport.BytesToRead > 0)
+            ProcessIncoming(_transport.ReadAvailable());
 
         return _latestReading;
     }
@@ -107,10 +103,36 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
     public void Dispose()
     {
         _stopwatch.Reset();
-        _serialPort?.Close();
-        _serialPort?.Dispose();
-        _serialPort = null;
+        _transport?.Dispose();
+        _transport = null;
+        _pending = string.Empty;
         IsInitialized = false;
+    }
+
+    private void ProcessIncoming(byte[] bytes)
+    {
+        if (bytes.Length == 0)
+            return;
+
+        _pending += Encoding.ASCII.GetString(bytes);
+
+        int newlineIndex;
+        while ((newlineIndex = _pending.IndexOf('\n')) >= 0)
+        {
+            string line = _pending.Substring(0, newlineIndex).Trim();
+            _pending = _pending.Substring(newlineIndex + 1);
+
+            if (line.Length == 0)
+                continue;
+
+            if (GgaPrefixRegex().IsMatch(line))
+                TryParseGga(line);
+            else if (RmcPrefixRegex().IsMatch(line))
+                TryParseRmc(line);
+        }
+
+        if (_pending.Length > MaxPendingLength)
+            _pending = string.Empty;
     }
 
     private void TryParseGga(string sentence)
@@ -129,7 +151,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
         double latitude = ConvertNmeaCoordinate(latRaw, parts[3]);
         double longitude = ConvertNmeaCoordinate(lonRaw, parts[5]);
 
-        _latestReading = new GpsData(latitude, longitude, altitude, new Vector3(0, 0, 0), _stopwatch.Elapsed);
+        _latestReading = new GpsData(latitude, longitude, altitude, _latestReading.Velocity, _stopwatch.Elapsed);
     }
 
     private void TryParseRmc(string sentence)
@@ -145,7 +167,7 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
 
         var current = _latestReading;
         _latestReading = new GpsData(current.Latitude, current.Longitude, current.Altitude,
-            new Vector3(speedMps, 0, 0), _stopwatch.Elapsed);
+            new Vector3(speedMps, 0, 0), _stopwatch.Elapsed, current.FixStatus);
     }
 
     private static double ConvertNmeaCoordinate(double raw, string direction)

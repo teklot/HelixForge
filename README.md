@@ -56,6 +56,13 @@ HelixForge is a shared abstraction layer for hardware on .NET — **the vocabula
   - [`IPlcDevice`](#iplcdevice)
   - [`IBenchPowerSupply`](#ibenchpowersupply)
   - [`IBatteryCycler`](#ibatterycycler)
+- [Hardware Drivers](#hardware-drivers)
+  - [`Bmi160ImuDevice`](#bmi160imudevice)
+  - [`Bmi160SpiImuDevice`](#bmi160spiimudevice)
+  - [`NmeaGpsDevice`](#nmeagpsdevice)
+  - [`UbxGpsDevice`](#ubxgpsdevice)
+  - [`PwmMotorDevice`](#pwmmotordevice)
+  - [`DShotMotorDevice` / `DShotCodec`](#dshotmotordevice--dshotcodec)
 - [Supported Frameworks](#supported-frameworks)
 
 ## The Problem
@@ -245,7 +252,7 @@ The delegate sink pattern remains available for any other backend (SQLite, netwo
 | **HelixForge.Simulation** | Deterministic simulation engine: `SimulationEngine`, `SimImuDevice`, `SimMotorDevice`, `SimServoDevice`, `SimGpsDevice`, `SimMagDevice`, `SimBarometerDevice`, `SimBatteryDevice`, `SimDifferentialDriveDevice`, `MotorMixer`, `SimulationConfig`, configurable noise, drift, dropout, and environment models |
 | **HelixForge.Control** | Control library: `PidController`, `ComplementaryFilter`, `MadgwickFilter`, `ScalarKalmanFilter`, `TrapezoidalProfile`, `Quaternion` — allocation-free control logic for any backend |
 | **HelixForge.Telemetry** | Telemetry bus and sinks: `TelemetryBus`, `TelemetryEvent`, `ConsoleSink`, `DelegateSink`, `CsvSink`, `BufferedSink`, `TelemetryDropPolicy`, `ITelemetrySink` |
-| **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C), NMEA GPS (UART), PWM motor ESC — more drivers coming in future releases |
+| **HelixForge.Hardware** | Real hardware device drivers: BMI160 IMU (I2C/SPI), NMEA and UBX GPS (UART), PWM and DShot motor ESCs — each behind a small transport seam (`II2cBus`, `ISpiBus`, `ISerialTransport`, `IPwmChannel`, `IDShotTransport`) for hardware-free unit testing |
 | **HelixForge.Instruments** | Instrument & industrial device models: `SimOscilloscopeDevice`, `SimDaqDevice`, `SimPlcDevice`, `SimBenchPsuDevice`, `SimBatteryCyclerDevice` — deterministic sims with a standalone SCPI wire seam (`SimScpiInstrument`, IEEE-488.2 block framing) |
 
 ## Installation
@@ -608,6 +615,68 @@ state-of-charge and reports open-circuit-voltage-based cell voltage, publishing
 
 Each sim is deterministic: identical config + identical call sequence → identical data and
 identical telemetry. See `HelixForge.Tests/Instruments` for unit and determinism tests.
+
+## Hardware Drivers
+
+`HelixForge.Hardware` ships real drivers for common robotics peripherals. Every driver
+talks to a small HelixForge-owned transport interface instead of a vendor SDK, so the same
+driver code runs on a board or against an in-memory fake in unit tests.
+
+| Transport | Purpose | System adapter |
+|---|---|---|
+| `II2cBus` / `II2cDevice` | register and burst transfers | `I2cBusAdapter` |
+| `ISpiBus` / `ISpiDevice` | full-duplex SPI transfers | `SpiBusAdapter` |
+| `ISerialTransport` | byte-stream UART | `SerialPortTransport` |
+| `IPwmChannel` | duty-cycle PWM output | `PwmChannelAdapter` |
+| `IDShotTransport` | encoded DShot frames | timing co-processor integration |
+
+```csharp
+using HelixForge.Hardware.Drivers;
+
+using var imu = new Bmi160ImuDevice("imu-01", 1, 0x68); // I2C bus 1, address 0x68
+imu.Initialize();
+ImuData reading = imu.Read();
+```
+
+### `Bmi160ImuDevice`
+BMI160 IMU over I2C. Reads a single 12-byte burst covering gyroscope (`0x0C–0x11`) and
+accelerometer (`0x12–0x17`) data, scales it to rad/s and m/s², and stamps readings from a
+monotonic `Stopwatch`. A driver built from a bus ID owns and disposes that bus; a driver
+built from a supplied `II2cBus` only disposes its own device.
+
+### `Bmi160SpiImuDevice`
+The same chip over SPI (mode 0 or 3, up to 10 MHz). A read of `0x7F` switches the chip into
+SPI mode, after which register reads set the read bit (`0x80`) and discard the two leading
+dummy bytes. Gyro and accelerometer parsing matches the I2C driver.
+
+### `NmeaGpsDevice`
+Parses `$--GGA` (position and altitude) and `$--RMC` (ground speed) NMEA 0183 sentences
+from a byte stream, buffering partial lines across reads. Any two-character talker ID
+(`GP`, `GN`, `GL`, ...) is accepted.
+
+### `UbxGpsDevice`
+Parses u-blox UBX `NAV-PVT` (class `0x01`, id `0x07`, 92-byte payload) frames. Sync bytes,
+length, and the Fletcher-8 checksum are validated; garbage and partial frames are retained
+or skipped without losing the next valid frame. UBX velocities are NED in millimetres per
+second and map to `GpsData.Velocity` as north/east/up with the down component negated.
+
+### `PwmMotorDevice`
+Drives a conventional hobby ESC with 50 Hz PWM: throttle `[0, 1]` maps to 1000–2000 µs
+pulses, and initialization holds the disarmed pulse for the arming delay (2 s by default).
+
+### `DShotMotorDevice` / `DShotCodec`
+Builds 16-bit DShot frames: 11 throttle bits (0 disarms; 48–2047 is the throttle band), a
+telemetry-request bit, and a 4-bit CRC (`v ^ (v >> 4) ^ (v >> 8)`). The motor driver sends
+frames through `IDShotTransport`, which is expected to run on a timing-capable co-processor
+— managed code cannot meet DShot's microsecond timing.
+
+```csharp
+using HelixForge.Hardware.Drivers;
+
+using var esc = new DShotMotorDevice("esc-01", coProcessorTransport);
+esc.Initialize();
+esc.SetThrottle(0.4); // encodes and sends a CRC-checked frame
+```
 
 ## Supported Frameworks
 

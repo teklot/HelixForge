@@ -1,6 +1,6 @@
 using System;
-using System.Device.Pwm;
 using System.Threading;
+using HelixForge.Hardware.Transports;
 
 namespace HelixForge.Hardware.Drivers;
 
@@ -16,8 +16,9 @@ public sealed class PwmMotorDevice : IMotorDevice
     private const int ArmDelayMs = 2000;
 
     private readonly int _chip;
-    private readonly int _channel;
-    private PwmChannel? _pwmChannel;
+    private readonly int _channelNumber;
+    private readonly TimeSpan _armDelay;
+    private IPwmChannel? _channel;
     private double _throttle;
 
     /// <inheritdoc />
@@ -32,7 +33,7 @@ public sealed class PwmMotorDevice : IMotorDevice
     /// <inheritdoc />
     public double Throttle => _throttle;
 
-    /// <summary>Creates a new PWM motor device.</summary>
+    /// <summary>Creates a new PWM motor device on a physical PWM channel.</summary>
     /// <param name="deviceId">Unique device identifier.</param>
     /// <param name="chip">PWM chip number (0 on most boards).</param>
     /// <param name="channel">PWM channel number.</param>
@@ -40,7 +41,19 @@ public sealed class PwmMotorDevice : IMotorDevice
     {
         DeviceId = deviceId;
         _chip = chip;
+        _channelNumber = channel;
+        _armDelay = TimeSpan.FromMilliseconds(ArmDelayMs);
+    }
+
+    /// <summary>Creates a new PWM motor device on a supplied PWM channel.</summary>
+    /// <param name="deviceId">Unique device identifier.</param>
+    /// <param name="channel">PWM channel. The driver takes ownership of it.</param>
+    /// <param name="armDelay">How long to hold the disarmed pulse on initialization before accepting commands. Defaults to 2 seconds.</param>
+    public PwmMotorDevice(string deviceId, IPwmChannel channel, TimeSpan? armDelay = null)
+    {
+        DeviceId = deviceId;
         _channel = channel;
+        _armDelay = armDelay ?? TimeSpan.FromMilliseconds(ArmDelayMs);
     }
 
     /// <inheritdoc />
@@ -49,10 +62,11 @@ public sealed class PwmMotorDevice : IMotorDevice
         if (IsInitialized)
             throw new InvalidOperationException($"Device '{DeviceId}' is already initialized.");
 
-        _pwmChannel = PwmChannel.Create(_chip, _channel, Frequency, 0);
-        _pwmChannel.Start();
+        IPwmChannel channel = _channel ?? (_channel = new PwmChannelAdapter(_chip, _channelNumber, Frequency));
+        channel.Start();
 
-        Thread.Sleep(ArmDelayMs);
+        if (_armDelay > TimeSpan.Zero)
+            Thread.Sleep(_armDelay);
 
         IsInitialized = true;
         IsActive = true;
@@ -69,7 +83,7 @@ public sealed class PwmMotorDevice : IMotorDevice
 
         _throttle = normalizedThrottle;
         double dutyCycle = (MinPulseMs + normalizedThrottle * (MaxPulseMs - MinPulseMs)) / (1000.0 / Frequency);
-        _pwmChannel!.DutyCycle = dutyCycle;
+        _channel!.DutyCycle = dutyCycle;
     }
 
     /// <inheritdoc />
@@ -82,9 +96,8 @@ public sealed class PwmMotorDevice : IMotorDevice
     /// <inheritdoc />
     public void Dispose()
     {
-        _pwmChannel?.Stop();
-        _pwmChannel?.Dispose();
-        _pwmChannel = null;
+        _channel?.Dispose();
+        _channel = null;
         IsInitialized = false;
         IsActive = false;
     }
