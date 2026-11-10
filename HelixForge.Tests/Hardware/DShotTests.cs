@@ -140,6 +140,23 @@ public class DShotMotorDeviceTests
     }
 
     [Fact]
+    public void Reset_AfterDispose_DoesNotThrowOrSendFrame()
+    {
+        var transport = new FakeDShotTransport();
+        var motor = new DShotMotorDevice("esc-01", transport);
+        motor.Initialize();
+        motor.Dispose();
+        int frameCount = transport.Frames.Count;
+
+        motor.Reset();
+
+        Assert.Equal(frameCount, transport.Frames.Count);
+        Assert.Equal(0.0, motor.Throttle);
+        Assert.False(motor.IsInitialized);
+        Assert.False(motor.IsActive);
+    }
+
+    [Fact]
     public void Initialize_Twice_Throws()
     {
         var transport = new FakeDShotTransport();

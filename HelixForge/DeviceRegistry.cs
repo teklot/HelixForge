@@ -12,6 +12,7 @@ public sealed class DeviceRegistry
 {
     private readonly Dictionary<string, IDevice> _devicesById = new Dictionary<string, IDevice>(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<Type, List<IDevice>> _devicesByType = new Dictionary<Type, List<IDevice>>();
+    private readonly Dictionary<Type, object> _typeSnapshots = new Dictionary<Type, object>();
 
     /// <summary>
     /// Gets the total number of registered devices.
@@ -46,6 +47,8 @@ public sealed class DeviceRegistry
             }
             list.Add(device);
         }
+
+        _typeSnapshots.Clear();
     }
 
     /// <summary>
@@ -71,6 +74,7 @@ public sealed class DeviceRegistry
             }
         }
 
+        _typeSnapshots.Clear();
         return true;
     }
 
@@ -104,9 +108,17 @@ public sealed class DeviceRegistry
     /// <returns>An enumerable of matching devices (empty if none found).</returns>
     public IEnumerable<T> GetAllByType<T>() where T : class, IDevice
     {
-        if (_devicesByType.TryGetValue(typeof(T), out var list))
-            return list.OfType<T>().ToList();
-        return Enumerable.Empty<T>();
+        if (!_devicesByType.TryGetValue(typeof(T), out var list))
+            return Array.Empty<T>();
+
+        if (_typeSnapshots.TryGetValue(typeof(T), out var cached))
+            return (T[])cached;
+
+        var snapshot = new T[list.Count];
+        for (int i = 0; i < list.Count; i++)
+            snapshot[i] = (T)list[i];
+        _typeSnapshots[typeof(T)] = snapshot;
+        return snapshot;
     }
 
     /// <summary>

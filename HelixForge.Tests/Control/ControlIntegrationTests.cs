@@ -26,7 +26,7 @@ public class ControlIntegrationTests
         registry.Register(motorR);
 
         var engine = new SimulationEngine(registry, null,
-            new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10), RandomSeed = 42 });
+            new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10) });
 
         var pid = new PidController(new PidConfig
         {
@@ -65,7 +65,7 @@ public class ControlIntegrationTests
         registry.Register(imu);
 
         var engine = new SimulationEngine(registry, null,
-            new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10), RandomSeed = 7 });
+            new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10) });
 
         var filter = new MadgwickFilter(new MadgwickFilterConfig { Beta = 0.5 });
 

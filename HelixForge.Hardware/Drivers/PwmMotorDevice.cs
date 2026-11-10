@@ -89,16 +89,36 @@ public sealed class PwmMotorDevice : IMotorDevice
     /// <inheritdoc />
     public void Reset()
     {
-        SetThrottle(0);
-        IsActive = true;
+        if (IsInitialized)
+        {
+            SetThrottle(0);
+            IsActive = true;
+        }
+        else
+        {
+            _throttle = 0.0;
+            IsActive = false;
+        }
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        _channel?.Dispose();
-        _channel = null;
-        IsInitialized = false;
-        IsActive = false;
+        try
+        {
+            if (IsInitialized)
+            {
+                SetThrottle(0);
+                _channel?.Stop();
+            }
+        }
+        finally
+        {
+            _channel?.Dispose();
+            _channel = null;
+            _throttle = 0.0;
+            IsInitialized = false;
+            IsActive = false;
+        }
     }
 }

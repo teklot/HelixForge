@@ -12,11 +12,9 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;Hardware;Robotics;UAV;IMU;GPS;PWM;I2C;SPI;dotnet-library</PackageTags>
     <PackageReleaseNotes>
-	  - Transport seams (II2cBus, ISpiBus, ISerialTransport, IPwmChannel, IDShotTransport) with System.Device adapters for hardware-free unit tests
-      - BMI160 IMU over SPI (SPI-mode activation and read-bit protocol)
-      - UBX NAV-PVT GPS parsing with Fletcher-8 validation and NED-to-local velocity mapping
-      - DShot frame/CRC codec and DShotMotorDevice over an IDShotTransport seam
-      - BMI160, NMEA, and PWM drivers refactored onto transports with full test coverage
+      - NMEA GPS parsing now reports the actual fix quality and derives north/east velocity from speed and course over ground
+      - PWM motors now disarm and stop the channel when disposed, and resetting after disposal is safe
+      - DShot motors can be reset after disposal without sending a frame
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>

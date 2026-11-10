@@ -22,8 +22,7 @@ internal static class SimulationDemo
     {
         var simConfig = new SimulationConfig
         {
-            TimeStep = timeStep,
-            RandomSeed = 42
+            TimeStep = timeStep
         };
 
         var imuConfig = new ImuSimConfig

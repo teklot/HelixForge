@@ -148,26 +148,35 @@ public sealed partial class NmeaGpsDevice : IGpsDevice
         if (!double.TryParse(parts[9], NumberStyles.Float, CultureInfo.InvariantCulture, out double altitude))
             return;
 
+        GpsFixStatus fixStatus = GpsFixStatus.NoFix;
+        if (int.TryParse(parts[6], NumberStyles.Integer, CultureInfo.InvariantCulture, out int fixQuality) && fixQuality > 0)
+            fixStatus = GpsFixStatus.Fix3D;
+
         double latitude = ConvertNmeaCoordinate(latRaw, parts[3]);
         double longitude = ConvertNmeaCoordinate(lonRaw, parts[5]);
 
-        _latestReading = new GpsData(latitude, longitude, altitude, _latestReading.Velocity, _stopwatch.Elapsed);
+        _latestReading = new GpsData(latitude, longitude, altitude, _latestReading.Velocity, _stopwatch.Elapsed, fixStatus);
     }
 
     private void TryParseRmc(string sentence)
     {
         string[] parts = sentence.Split(',');
-        if (parts.Length < 8)
+        if (parts.Length < 9)
             return;
 
         if (!double.TryParse(parts[7], NumberStyles.Float, CultureInfo.InvariantCulture, out double speedKnots))
             return;
+        if (!double.TryParse(parts[8], NumberStyles.Float, CultureInfo.InvariantCulture, out double courseDegrees))
+            return;
 
         double speedMps = speedKnots * 0.514444;
+        double courseRadians = courseDegrees * Math.PI / 180.0;
+        double north = speedMps * Math.Cos(courseRadians);
+        double east = speedMps * Math.Sin(courseRadians);
 
         var current = _latestReading;
         _latestReading = new GpsData(current.Latitude, current.Longitude, current.Altitude,
-            new Vector3(speedMps, 0, 0), _stopwatch.Elapsed, current.FixStatus);
+            new Vector3(north, east, current.Velocity.Z), _stopwatch.Elapsed, current.FixStatus);
     }
 
     private static double ConvertNmeaCoordinate(double raw, string direction)

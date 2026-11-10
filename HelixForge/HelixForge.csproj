@@ -11,7 +11,10 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;HardwareAbstraction;Simulation;Robotics;UAV;Telemetry;dotnet-library</PackageTags>
-    <PackageReleaseNotes>Adds IBatteryDevice/BatteryData, ICurrentConsumer, IDifferentialDriveDevice, and Pose2D abstractions.</PackageReleaseNotes>
+    <PackageReleaseNotes>
+      - Empty GPS readings now report no fix instead of a false 3D fix
+      - Device lookups by type now reuse a cached snapshot, removing per-step allocations while keeping results stable during enumeration
+    </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

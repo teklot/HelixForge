@@ -12,9 +12,8 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageTags>HelixForge;Telemetry;Observability;Robotics;dotnet-library</PackageTags>
     <PackageReleaseNotes>
-	  - CsvSink: tidy-long CSV archival (timestamp_ms,device_id,metric,value) with vector rows expanded to .x/.y/.z
-      - BufferedSink: bounded queue with DropOldest/DropNewest policies, dropped/failed counters, and flush-on-dispose
-      - Persistence never blocks or affects system behavior
+      - A failing telemetry sink can no longer stop publishing or abort a simulation step
+      - Added failure count and last-error diagnostics so sink problems can be investigated
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/teklot/HelixForge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/HelixForge.git</RepositoryUrl>

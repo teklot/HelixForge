@@ -76,6 +76,69 @@ public class TelemetryBusTests
     }
 
     [Fact]
+    public void Publish_ThrowingSink_DoesNotPreventOtherSinks()
+    {
+        var bus = new TelemetryBus();
+        int received = 0;
+        bus.AddSink(new DelegateSink(_ => throw new InvalidOperationException("boom")));
+        bus.AddSink(new DelegateSink(_ => received++));
+
+        bus.Publish("imu-01", "test", 1.0, TimeSpan.Zero);
+
+        Assert.Equal(1, received);
+        Assert.Equal(1, bus.FailedPublishCount);
+        Assert.IsType<InvalidOperationException>(bus.LastFailure);
+
+        bus.Dispose();
+    }
+
+    [Fact]
+    public void Publish_VectorThrowingSink_IsIsolated()
+    {
+        var bus = new TelemetryBus();
+        int received = 0;
+        bus.AddSink(new DelegateSink(_ => throw new InvalidOperationException("boom")));
+        bus.AddSink(new DelegateSink(_ => received++));
+
+        var value = new Vector3(1.0, 2.0, 3.0);
+        bus.Publish("imu-01", "acceleration", in value, TimeSpan.Zero);
+
+        Assert.Equal(1, received);
+        Assert.Equal(1, bus.FailedPublishCount);
+        Assert.NotNull(bus.LastFailure);
+
+        bus.Dispose();
+    }
+
+    [Fact]
+    public void Publish_MultipleFailures_CountsEachCallback()
+    {
+        var bus = new TelemetryBus();
+        bus.AddSink(new DelegateSink(_ => throw new InvalidOperationException("boom")));
+
+        bus.Publish("imu-01", "test", 1.0, TimeSpan.Zero);
+        bus.Publish("imu-01", "test", 2.0, TimeSpan.Zero);
+
+        Assert.Equal(2, bus.FailedPublishCount);
+
+        bus.Dispose();
+    }
+
+    [Fact]
+    public void FailedPublishCount_NoFailures_IsZero()
+    {
+        var bus = new TelemetryBus();
+        bus.AddSink(new DelegateSink(_ => { }));
+
+        bus.Publish("imu-01", "test", 1.0, TimeSpan.Zero);
+
+        Assert.Equal(0, bus.FailedPublishCount);
+        Assert.Null(bus.LastFailure);
+
+        bus.Dispose();
+    }
+
+    [Fact]
     public void RemoveSink_StopsDelivery()
     {
         var bus = new TelemetryBus();

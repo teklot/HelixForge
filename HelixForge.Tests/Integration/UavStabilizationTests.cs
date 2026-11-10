@@ -28,7 +28,7 @@ public class UavStabilizationTests
         motorL.Initialize();
         motorR.Initialize();
 
-        var config = new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10), RandomSeed = 42 };
+        var config = new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10) };
         var engine = new SimulationEngine(registry, null, config);
 
         var pid = new PidController(new PidConfig

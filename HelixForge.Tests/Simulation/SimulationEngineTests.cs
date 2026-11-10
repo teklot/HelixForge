@@ -1,5 +1,6 @@
 using HelixForge;
 using HelixForge.Simulation;
+using HelixForge.Telemetry;
 
 namespace HelixForge.Tests.Simulation;
 
@@ -138,6 +139,59 @@ public class SimulationEngineTests
     }
 
     [Fact]
+    public void Step_PublishesLatestReadingWithoutCallingRead()
+    {
+        var registry = new DeviceRegistry();
+        var imu = new ReadTrackingImu();
+        registry.Register(imu);
+
+        var telemetry = new TelemetryBus();
+        var events = new List<TelemetryEvent>();
+        telemetry.AddSink(new DelegateSink(e => events.Add(e)));
+
+        var config = new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10) };
+        var engine = new SimulationEngine(registry, telemetry, config);
+
+        engine.Step();
+
+        Assert.Equal(1, imu.UpdateCount);
+        Assert.Equal(0, imu.ReadCount);
+        Assert.Contains(events, e => e.DeviceId == "imu-tracking"
+            && e.MetricName == "orientation.x"
+            && e.DoubleValue == 1.25);
+
+        telemetry.Dispose();
+    }
+
+    [Fact]
+    public void Step_ThrowingSink_DoesNotAbortStep()
+    {
+        var registry = new DeviceRegistry();
+        registry.Register(new SimImuDevice("imu-01", new ImuSimConfig()));
+
+        var telemetry = new TelemetryBus();
+        telemetry.AddSink(new DelegateSink(_ => throw new InvalidOperationException("sink failure")));
+        var events = new List<TelemetryEvent>();
+        telemetry.AddSink(new DelegateSink(e => events.Add(e)));
+
+        var config = new SimulationConfig { TimeStep = TimeSpan.FromMilliseconds(10) };
+        var engine = new SimulationEngine(registry, telemetry, config);
+
+        bool stepCompleted = false;
+        engine.StepCompleted += (_, _) => stepCompleted = true;
+
+        engine.Step();
+
+        Assert.Equal(1, engine.StepCount);
+        Assert.True(stepCompleted);
+        Assert.NotEmpty(events);
+        Assert.True(telemetry.FailedPublishCount > 0);
+        Assert.IsType<InvalidOperationException>(telemetry.LastFailure);
+
+        telemetry.Dispose();
+    }
+
+    [Fact]
     public void Step_UpdatesServoDevices()
     {
         var registry = new DeviceRegistry();
@@ -224,5 +278,42 @@ public class SimulationEngineTests
 
         // 1 m/s for 10ms = 0.01m of forward travel.
         Assert.Equal(0.01, drive.Read().Pose.X, 4);
+    }
+
+    private sealed class ReadTrackingImu : IImuDevice
+    {
+        public string DeviceId => "imu-tracking";
+
+        public bool IsInitialized { get; private set; }
+
+        public ImuData LatestReading { get; private set; }
+
+        public int UpdateCount { get; private set; }
+
+        public int ReadCount { get; private set; }
+
+        public void Initialize() => IsInitialized = true;
+
+        public void Update(TimeSpan deltaTime)
+        {
+            UpdateCount++;
+            LatestReading = new ImuData(
+                new Vector3(1.25, 2.5, 3.75),
+                Vector3.Zero,
+                Vector3.Zero,
+                TimeSpan.Zero);
+        }
+
+        public ImuData Read()
+        {
+            ReadCount++;
+            return LatestReading;
+        }
+
+        public void Reset() => LatestReading = ImuData.Empty;
+
+        public void Dispose()
+        {
+        }
     }
 }

@@ -121,7 +121,7 @@ public sealed class SimulationEngine
 
         foreach (var imu in _registry.GetAllByType<IImuDevice>())
         {
-            var data = imu.Read();
+            var data = imu.LatestReading;
             _telemetry.Publish(imu.DeviceId, "orientation.x", data.Orientation.X, _currentTime);
             _telemetry.Publish(imu.DeviceId, "orientation.y", data.Orientation.Y, _currentTime);
             _telemetry.Publish(imu.DeviceId, "orientation.z", data.Orientation.Z, _currentTime);
@@ -139,7 +139,7 @@ public sealed class SimulationEngine
 
         foreach (var gps in _registry.GetAllByType<IGpsDevice>())
         {
-            var data = gps.Read();
+            var data = gps.LatestReading;
             _telemetry.Publish(gps.DeviceId, "latitude", data.Latitude, _currentTime);
             _telemetry.Publish(gps.DeviceId, "longitude", data.Longitude, _currentTime);
             _telemetry.Publish(gps.DeviceId, "altitude", data.Altitude, _currentTime);
@@ -148,21 +148,21 @@ public sealed class SimulationEngine
 
         foreach (var mag in _registry.GetAllByType<IMagnetometerDevice>())
         {
-            var data = mag.Read();
+            var data = mag.LatestReading;
             var field = data.MagneticField;
             _telemetry.Publish(mag.DeviceId, "magnetic_field", in field, _currentTime);
         }
 
         foreach (var barometer in _registry.GetAllByType<IBarometerDevice>())
         {
-            var data = barometer.Read();
+            var data = barometer.LatestReading;
             _telemetry.Publish(barometer.DeviceId, "pressure", data.Pressure, _currentTime);
             _telemetry.Publish(barometer.DeviceId, "altitude", data.Altitude, _currentTime);
         }
 
         foreach (var battery in _registry.GetAllByType<IBatteryDevice>())
         {
-            var data = battery.Read();
+            var data = battery.LatestReading;
             _telemetry.Publish(battery.DeviceId, "voltage", data.Voltage, _currentTime);
             _telemetry.Publish(battery.DeviceId, "current", data.Current, _currentTime);
             _telemetry.Publish(battery.DeviceId, "soc", data.ChargeFraction, _currentTime);
@@ -170,7 +170,7 @@ public sealed class SimulationEngine
 
         foreach (var drive in _registry.GetAllByType<IDifferentialDriveDevice>())
         {
-            var data = drive.Read();
+            var data = drive.LatestReading;
             _telemetry.Publish(drive.DeviceId, "pose.x", data.Pose.X, _currentTime);
             _telemetry.Publish(drive.DeviceId, "pose.y", data.Pose.Y, _currentTime);
             _telemetry.Publish(drive.DeviceId, "pose.yaw", data.Pose.Yaw, _currentTime);

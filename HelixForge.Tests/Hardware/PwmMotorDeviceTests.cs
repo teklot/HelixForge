@@ -81,15 +81,35 @@ public class PwmMotorDeviceTests
     }
 
     [Fact]
-    public void Dispose_DisposesChannel()
+    public void Dispose_DisarmsStopsAndDisposesChannel()
     {
         var channel = new FakePwmChannel();
         var motor = new PwmMotorDevice("motor-01", channel, TimeSpan.Zero);
         motor.Initialize();
+        motor.SetThrottle(0.7);
 
         motor.Dispose();
 
+        Assert.Equal(0.05, channel.DutyCycle, 6);
+        Assert.Equal(1, channel.StopCount);
         Assert.True(channel.Disposed);
+        Assert.Equal(0.0, motor.Throttle);
+        Assert.False(motor.IsInitialized);
+        Assert.False(motor.IsActive);
+    }
+
+    [Fact]
+    public void Reset_AfterDispose_DoesNotThrowAndStaysInactive()
+    {
+        var channel = new FakePwmChannel();
+        var motor = new PwmMotorDevice("motor-01", channel, TimeSpan.Zero);
+        motor.Initialize();
+        motor.SetThrottle(0.7);
+        motor.Dispose();
+
+        motor.Reset();
+
+        Assert.Equal(0.0, motor.Throttle);
         Assert.False(motor.IsInitialized);
         Assert.False(motor.IsActive);
     }

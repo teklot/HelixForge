@@ -47,8 +47,7 @@ internal static class TelemetrySample
 
         var engine = new SimulationEngine(registry, bus, new SimulationConfig
         {
-            TimeStep = timeStep,
-            RandomSeed = 42
+            TimeStep = timeStep
         });
         engine.Run(duration);
 

@@ -169,17 +169,23 @@ The simulation engine publishes device state each step. Telemetry sinks receive 
 
 ### Deterministic Execution
 
-Seed-based RNG produces identical results across runs:
+Randomness lives in each device's simulation config, not in the engine:
 
 ```csharp
+var imu = new SimImuDevice("imu-01", new ImuSimConfig
+{
+    AccelerometerNoise = 0.005,
+    GyroscopeNoise = 0.002,
+    RandomSeed = 42
+});
+
 var config = new SimulationConfig
 {
-    TimeStep = TimeSpan.FromMilliseconds(10),
-    RandomSeed = 42
+    TimeStep = TimeSpan.FromMilliseconds(10)
 };
 ```
 
-Same seed, same noise, same orientation trajectory, same motor response. Essential for regression testing control algorithms.
+Same device seed, same noise, same orientation trajectory, same motor response. The engine itself owns no RNG, so determinism is explicit at the device boundary and control algorithms stay regression-testable.
 
 ## Use Cases
 
@@ -232,7 +238,7 @@ buffered.Flush();
 Console.WriteLine($"{csv.RowsWritten} rows, {buffered.DroppedCount} dropped");
 ```
 
-The delegate sink pattern remains available for any other backend (SQLite, network, in-memory).
+The delegate sink pattern remains available for consumer-owned backends; HelixForge does not ship durable stores or replay.
 
 ## Technical Differentiators
 
@@ -275,8 +281,7 @@ using HelixForge.Telemetry;
 // Configure simulation
 var config = new SimulationConfig
 {
-    TimeStep = TimeSpan.FromMilliseconds(10), // 100Hz
-    RandomSeed = 42
+    TimeStep = TimeSpan.FromMilliseconds(10) // 100Hz
 };
 
 // Register devices
@@ -285,7 +290,8 @@ var imu = new SimImuDevice("imu-01", new ImuSimConfig
 {
     AccelerometerNoise = 0.005,
     GyroscopeNoise = 0.002,
-    InitialOrientation = new Vector3(0.2, 0.1, 0.0)
+    InitialOrientation = new Vector3(0.2, 0.1, 0.0),
+    RandomSeed = 42
 });
 var motor = new SimMotorDevice("motor-01", new MotorSimConfig
 {
@@ -559,7 +565,7 @@ The `HelixForge.Instruments` package models lab and industrial instrumentation w
 ships as a wire-facing contract plus a seeded sim model that emits telemetry metrics.
 
 Interop is deliberately **wire-level only**: HelixForge.Instruments holds zero references to
-SignalFlux or any transport library. A controller talks to these sims the same way it would
+any transport or data-plane library. A controller talks to these sims the same way it would
 talk to physical gear — by writing SCPI command bytes and reading framed responses.
 
 ```csharp
@@ -588,7 +594,7 @@ byte[] reply = connection.ReadAvailable(); // "HelixForge,SimScpiInstrument,1.0\
 Wire-facing SCPI responder. Reads CRLF-terminated query bytes off an
 `IInstrumentStreamConnection`, dispatches to the backend device, and writes
 IEEE-488.2 definite-length (`#<n>`...) or indefinite (`#0`) framed responses.
-By construction it references no SignalFlux types — the wire protocol is the seam.
+By construction it references no external library types — the wire protocol is the seam.
 
 ### `IOscilloscopeDevice`
 Full-capture waveform instrument: configurable channel count, sample rate, amplitude,
@@ -650,9 +656,11 @@ SPI mode, after which register reads set the read bit (`0x80`) and discard the t
 dummy bytes. Gyro and accelerometer parsing matches the I2C driver.
 
 ### `NmeaGpsDevice`
-Parses `$--GGA` (position and altitude) and `$--RMC` (ground speed) NMEA 0183 sentences
-from a byte stream, buffering partial lines across reads. Any two-character talker ID
-(`GP`, `GN`, `GL`, ...) is accepted.
+Parses `$--GGA` (position, altitude, and fix quality) and `$--RMC` (speed plus course over
+ground) NMEA 0183 sentences from a byte stream, buffering partial lines across reads. GGA
+quality `0` maps to `GpsFixStatus.NoFix`; any higher quality maps to `Fix3D`. RMC speed and
+course become a north/east velocity vector, preserving the existing vertical component and
+fix status. Any two-character talker ID (`GP`, `GN`, `GL`, ...) is accepted.
 
 ### `UbxGpsDevice`
 Parses u-blox UBX `NAV-PVT` (class `0x01`, id `0x07`, 92-byte payload) frames. Sync bytes,

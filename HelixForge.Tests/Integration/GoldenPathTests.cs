@@ -28,8 +28,7 @@ public class GoldenPathTests
 
         var config = new SimulationConfig
         {
-            TimeStep = TimeSpan.FromMilliseconds(10),
-            RandomSeed = 42
+            TimeStep = TimeSpan.FromMilliseconds(10)
         };
         var engine = new SimulationEngine(registry, telemetry, config);
 
@@ -60,8 +59,7 @@ public class GoldenPathTests
 
         var config2 = new SimulationConfig
         {
-            TimeStep = TimeSpan.FromMilliseconds(10),
-            RandomSeed = 42
+            TimeStep = TimeSpan.FromMilliseconds(10)
         };
         var engine2 = new SimulationEngine(registry2, null, config2);
         engine2.Run(TimeSpan.FromSeconds(1));

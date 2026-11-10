@@ -33,6 +33,7 @@ public class GpsDataTests
         Assert.Equal(0.0, data.Altitude);
         Assert.Equal(Vector3.Zero, data.Velocity);
         Assert.Equal(TimeSpan.Zero, data.Timestamp);
+        Assert.Equal(GpsFixStatus.NoFix, data.FixStatus);
     }
 
     [Fact]

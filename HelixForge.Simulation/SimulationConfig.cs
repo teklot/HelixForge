@@ -15,7 +15,4 @@ public sealed class SimulationConfig
 
     /// <summary>Initial simulation time. Default is zero.</summary>
     public TimeSpan StartTime { get; set; } = TimeSpan.Zero;
-
-    /// <summary>Random seed for deterministic simulation. Null uses system clock.</summary>
-    public int? RandomSeed { get; set; }
 }

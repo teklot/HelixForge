@@ -21,8 +21,7 @@ public class SimulationEngineBenchmark
 
         var config = new SimulationConfig
         {
-            TimeStep = TimeSpan.FromMilliseconds(0.01), // 100kHz for benchmark
-            RandomSeed = 42
+            TimeStep = TimeSpan.FromMilliseconds(0.01) // 100kHz for benchmark
         };
 
         _engine = new SimulationEngine(_registry, null, config);

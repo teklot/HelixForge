@@ -87,6 +87,64 @@ public class DeviceRegistryTests
     }
 
     [Fact]
+    public void GetAllByType_RepeatedCalls_ReturnCachedSnapshot()
+    {
+        var registry = new DeviceRegistry();
+        registry.Register(new SimImuDevice("imu-01", new ImuSimConfig()));
+
+        var first = registry.GetAllByType<IImuDevice>();
+        var second = registry.GetAllByType<IImuDevice>();
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
+    public void GetAllByType_RegisterInvalidatesSnapshot()
+    {
+        var registry = new DeviceRegistry();
+        registry.Register(new SimImuDevice("imu-01", new ImuSimConfig()));
+        var before = registry.GetAllByType<IImuDevice>();
+
+        registry.Register(new SimImuDevice("imu-02", new ImuSimConfig()));
+        var after = registry.GetAllByType<IImuDevice>();
+
+        Assert.NotSame(before, after);
+        Assert.Single(before);
+        Assert.Equal(2, after.Count());
+    }
+
+    [Fact]
+    public void GetAllByType_UnregisterInvalidatesSnapshot()
+    {
+        var registry = new DeviceRegistry();
+        registry.Register(new SimImuDevice("imu-01", new ImuSimConfig()));
+        registry.Register(new SimImuDevice("imu-02", new ImuSimConfig()));
+        var before = registry.GetAllByType<IImuDevice>();
+
+        registry.Unregister("imu-02");
+        var after = registry.GetAllByType<IImuDevice>();
+
+        Assert.NotSame(before, after);
+        Assert.Equal(2, before.Count());
+        Assert.Equal("imu-01", Assert.Single(after).DeviceId);
+    }
+
+    [Fact]
+    public void GetAllByType_RepeatedCalls_DoNotAllocate()
+    {
+        var registry = new DeviceRegistry();
+        registry.Register(new SimImuDevice("imu-01", new ImuSimConfig()));
+        registry.GetAllByType<IImuDevice>(); // warm the snapshot cache
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++)
+            _ = registry.GetAllByType<IImuDevice>();
+        long after = GC.GetAllocatedBytesForCurrentThread();
+
+        Assert.Equal(0, after - before);
+    }
+
+    [Fact]
     public void Unregister_RemovesDevice()
     {
         var registry = new DeviceRegistry();

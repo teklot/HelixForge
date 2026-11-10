@@ -42,8 +42,8 @@ public readonly struct GpsData : IEquatable<GpsData>
         FixStatus = fixStatus;
     }
 
-    /// <summary>An empty GPS reading with zero values.</summary>
-    public static readonly GpsData Empty = new GpsData(0, 0, 0, Vector3.Zero, TimeSpan.Zero);
+    /// <summary>An empty GPS reading with zero values and no fix.</summary>
+    public static readonly GpsData Empty = new GpsData(0, 0, 0, Vector3.Zero, TimeSpan.Zero, GpsFixStatus.NoFix);
 
     /// <inheritdoc />
     public bool Equals(GpsData other)

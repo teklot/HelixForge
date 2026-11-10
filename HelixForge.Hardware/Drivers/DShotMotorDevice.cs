@@ -67,8 +67,16 @@ public sealed class DShotMotorDevice : IMotorDevice
     /// <inheritdoc />
     public void Reset()
     {
-        SetThrottle(0);
-        IsActive = true;
+        if (IsInitialized)
+        {
+            SetThrottle(0);
+            IsActive = true;
+        }
+        else
+        {
+            _throttle = 0.0;
+            IsActive = false;
+        }
     }
 
     /// <inheritdoc />
